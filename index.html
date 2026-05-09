@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resham Printers Billing</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <img id="sideLogo" class="brand-logo" src="assets/resham-mark.svg" alt="Resham Printers logo">
+          <div>
+            <strong id="sideBusinessName">Resham Printers</strong>
+            <span>Billing and ledger</span>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="Main navigation">
+          <button class="nav-tab active" data-view="dashboard" type="button">
+            <span data-icon="layout"></span>
+            <span>Dashboard</span>
+          </button>
+          <button class="nav-tab" data-view="billing" type="button">
+            <span data-icon="receipt"></span>
+            <span>Billing</span>
+          </button>
+          <button class="nav-tab" data-view="masters" type="button">
+            <span data-icon="database"></span>
+            <span>Masters</span>
+          </button>
+          <button class="nav-tab" data-view="money" type="button">
+            <span data-icon="wallet"></span>
+            <span>Money</span>
+          </button>
+          <button class="nav-tab" data-view="ledger" type="button">
+            <span data-icon="book"></span>
+            <span>Ledger</span>
+          </button>
+          <button class="nav-tab" data-view="reports" type="button">
+            <span data-icon="chart"></span>
+            <span>Reports</span>
+          </button>
+          <button class="nav-tab" data-view="settings" type="button">
+            <span data-icon="settings"></span>
+            <span>Settings</span>
+          </button>
+        </nav>
+
+        <div class="cloud-card">
+          <div>
+            <span class="eyebrow">Storage</span>
+            <strong id="storageLabel">Local browser</strong>
+          </div>
+          <span class="status-dot" id="storageDot"></span>
+        </div>
+      </aside>
+
+      <main class="main-panel">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow" id="todayLabel"></span>
+            <h1 id="viewTitle">Dashboard</h1>
+          </div>
+          <div class="top-actions">
+            <button class="ghost-button" id="exportBackupBtn" type="button">
+              <span data-icon="download"></span>
+              Backup
+            </button>
+            <button class="primary-button" id="quickBillBtn" type="button">
+              <span data-icon="plus"></span>
+              New bill
+            </button>
+          </div>
+        </header>
+
+        <section id="dashboardView" class="view active-view">
+          <div class="metric-grid" id="metricGrid"></div>
+
+          <div class="dashboard-grid">
+            <article class="panel cash-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Cashflow</span>
+                  <h2>This month</h2>
+                </div>
+                <span class="mini-badge" id="monthBadge"></span>
+              </div>
+              <div class="flow-visual" id="flowVisual"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Pending</span>
+                  <h2>Customers to collect</h2>
+                </div>
+                <button class="icon-button" data-view-jump="ledger" type="button" aria-label="Open ledger">
+                  <span data-icon="arrowRight"></span>
+                </button>
+              </div>
+              <div id="pendingList" class="stack-list"></div>
+            </article>
+
+            <article class="panel wide-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Activity</span>
+                  <h2>Latest money movement</h2>
+                </div>
+                <button class="icon-button" data-view-jump="money" type="button" aria-label="Open money page">
+                  <span data-icon="arrowRight"></span>
+                </button>
+              </div>
+              <div id="activityTable" class="table-shell"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="billingView" class="view">
+          <div class="split-layout">
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Create bill</span>
+                  <h2 id="billingFormTitle">New invoice</h2>
+                </div>
+                <button class="ghost-button small-button" id="clearInvoiceBtn" type="button">
+                  <span data-icon="rotate"></span>
+                  Clear
+                </button>
+              </div>
+
+              <form id="invoiceForm" class="form-grid">
+                <label>
+                  <span>Bill type</span>
+                  <select id="billType">
+                    <option value="gst">GST invoice</option>
+                    <option value="simple">Simple bill</option>
+                    <option value="estimate">Estimate</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Invoice date</span>
+                  <input id="invoiceDate" type="date" required>
+                </label>
+                <label>
+                  <span>Customer name</span>
+                  <input id="customerName" type="text" list="partyOptions" placeholder="Customer / company" required>
+                  <datalist id="partyOptions"></datalist>
+                </label>
+                <label>
+                  <span>Mobile</span>
+                  <input id="customerPhone" type="tel" placeholder="Phone number">
+                </label>
+                <label class="full-span">
+                  <span>Customer address</span>
+                  <textarea id="customerAddress" rows="2" placeholder="Address"></textarea>
+                </label>
+                <label>
+                  <span>Customer GSTIN</span>
+                  <input id="customerGstin" type="text" placeholder="Optional">
+                </label>
+                <label>
+                  <span>Payment method</span>
+                  <select id="invoicePaymentMethod"></select>
+                </label>
+
+                <div class="full-span billing-tools">
+                  <div>
+                    <span class="eyebrow">Quick services</span>
+                    <div class="chip-row" id="serviceChips"></div>
+                  </div>
+                  <button class="ghost-button small-button" id="addItemBtn" type="button">
+                    <span data-icon="plus"></span>
+                    Add item
+                  </button>
+                </div>
+
+                <div class="full-span item-editor" id="itemEditor"></div>
+                <datalist id="itemOptions"></datalist>
+
+                <label>
+                  <span>Discount (Rs.)</span>
+                  <input id="invoiceDiscount" type="number" min="0" step="0.01" value="0">
+                </label>
+                <label>
+                  <span>Amount received</span>
+                  <input id="invoicePaid" type="number" min="0" step="0.01" value="0">
+                </label>
+                <label class="full-span">
+                  <span>Notes</span>
+                  <textarea id="invoiceNotes" rows="2" placeholder="Delivery note, design details, advance note"></textarea>
+                </label>
+
+                <div class="full-span invoice-summary" id="invoiceSummary"></div>
+
+                <div class="full-span action-row">
+                  <button class="primary-button" type="submit">
+                    <span data-icon="save"></span>
+                    Save bill
+                  </button>
+                  <button class="ghost-button" id="printDraftBtn" type="button">
+                    <span data-icon="printer"></span>
+                    Print preview
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel preview-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Saved bills</span>
+                  <h2>Invoices and estimates</h2>
+                </div>
+                <label class="search-box">
+                  <span data-icon="search"></span>
+                  <input id="invoiceSearch" type="search" placeholder="Search">
+                </label>
+              </div>
+              <div id="invoiceList" class="stack-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="mastersView" class="view">
+          <div class="split-layout masters-layout">
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Party master</span>
+                  <h2>Customers and suppliers</h2>
+                </div>
+              </div>
+              <form id="partyForm" class="form-grid">
+                <input id="partyId" type="hidden">
+                <label>
+                  <span>Party type</span>
+                  <select id="partyType">
+                    <option value="customer">Customer</option>
+                    <option value="supplier">Supplier</option>
+                    <option value="both">Both</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Opening balance</span>
+                  <input id="partyOpening" type="number" step="0.01" value="0">
+                </label>
+                <label class="full-span">
+                  <span>Party name</span>
+                  <input id="partyName" type="text" placeholder="Customer / supplier name" required>
+                </label>
+                <label>
+                  <span>Phone</span>
+                  <input id="partyPhone" type="tel" placeholder="Mobile">
+                </label>
+                <label>
+                  <span>GSTIN</span>
+                  <input id="partyGstin" type="text" placeholder="Optional">
+                </label>
+                <label class="full-span">
+                  <span>Address</span>
+                  <textarea id="partyAddress" rows="2" placeholder="Billing address"></textarea>
+                </label>
+                <div class="full-span action-row">
+                  <button class="primary-button" type="submit">
+                    <span data-icon="save"></span>
+                    Save party
+                  </button>
+                  <button class="ghost-button" id="clearPartyBtn" type="button">
+                    <span data-icon="rotate"></span>
+                    Clear
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Item master</span>
+                  <h2>Printing services and stock</h2>
+                </div>
+              </div>
+              <form id="itemMasterForm" class="form-grid">
+                <input id="itemMasterId" type="hidden">
+                <label class="full-span">
+                  <span>Item / service name</span>
+                  <input id="itemMasterName" type="text" placeholder="Flex banner, visiting card, design charge" required>
+                </label>
+                <label>
+                  <span>HSN / SAC</span>
+                  <input id="itemMasterHsn" type="text" placeholder="Optional">
+                </label>
+                <label>
+                  <span>Unit</span>
+                  <input id="itemMasterUnit" type="text" placeholder="pcs, sq.ft, job">
+                </label>
+                <label>
+                  <span>Sale rate</span>
+                  <input id="itemMasterRate" type="number" min="0" step="0.01" value="0">
+                </label>
+                <label>
+                  <span>GST %</span>
+                  <input id="itemMasterTax" type="number" min="0" step="0.01" value="18">
+                </label>
+                <div class="full-span action-row">
+                  <button class="primary-button" type="submit">
+                    <span data-icon="save"></span>
+                    Save item
+                  </button>
+                  <button class="ghost-button" id="clearItemMasterBtn" type="button">
+                    <span data-icon="rotate"></span>
+                    Clear
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel wide-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Master lists</span>
+                  <h2>Saved parties and items</h2>
+                </div>
+                <label class="search-box">
+                  <span data-icon="search"></span>
+                  <input id="masterSearch" type="search" placeholder="Search masters">
+                </label>
+              </div>
+              <div id="masterTables" class="masters-grid"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="moneyView" class="view">
+          <div class="split-layout money-layout">
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Entry</span>
+                  <h2>Money in / money out</h2>
+                </div>
+              </div>
+              <form id="transactionForm" class="form-grid">
+                <label>
+                  <span>Type</span>
+                  <select id="transactionType">
+                    <option value="income">Money in</option>
+                    <option value="expense">Money out</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Date</span>
+                  <input id="transactionDate" type="date" required>
+                </label>
+                <label>
+                  <span>Party / source</span>
+                  <input id="transactionParty" type="text" list="partyOptions" placeholder="Customer, supplier, owner" required>
+                </label>
+                <label>
+                  <span>Category</span>
+                  <input id="transactionCategory" type="text" list="categoryOptions" placeholder="Ink, paper, salary">
+                  <datalist id="categoryOptions">
+                    <option value="Printing sale"></option>
+                    <option value="Advance received"></option>
+                    <option value="Paper purchase"></option>
+                    <option value="Ink and toner"></option>
+                    <option value="Electricity"></option>
+                    <option value="Rent"></option>
+                    <option value="Salary"></option>
+                    <option value="Machine repair"></option>
+                    <option value="Transport"></option>
+                  </datalist>
+                </label>
+                <label>
+                  <span>Amount</span>
+                  <input id="transactionAmount" type="number" min="0" step="0.01" required>
+                </label>
+                <label>
+                  <span>Payment method</span>
+                  <select id="transactionMethod"></select>
+                </label>
+                <label class="full-span">
+                  <span>Note</span>
+                  <textarea id="transactionNote" rows="2" placeholder="What happened?"></textarea>
+                </label>
+                <div class="full-span action-row">
+                  <button class="primary-button" type="submit">
+                    <span data-icon="save"></span>
+                    Save entry
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Register</span>
+                  <h2>All entries</h2>
+                </div>
+                <label class="search-box">
+                  <span data-icon="search"></span>
+                  <input id="transactionSearch" type="search" placeholder="Search">
+                </label>
+              </div>
+              <div id="transactionTable" class="table-shell"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="ledgerView" class="view">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <span class="eyebrow">Customer ledger</span>
+                <h2>Who paid, who is pending</h2>
+              </div>
+              <button class="ghost-button small-button" id="printLedgerBtn" type="button">
+                <span data-icon="printer"></span>
+                Print
+              </button>
+            </div>
+            <div id="ledgerTable" class="table-shell"></div>
+          </article>
+        </section>
+
+        <section id="reportsView" class="view">
+          <div class="report-toolbar">
+            <label>
+              <span>Month</span>
+              <input id="reportMonth" type="month">
+            </label>
+            <button class="ghost-button" id="exportCsvBtn" type="button">
+              <span data-icon="download"></span>
+              Export CSV
+            </button>
+            <button class="ghost-button" id="printReportBtn" type="button">
+              <span data-icon="printer"></span>
+              Print report
+            </button>
+          </div>
+          <div class="dashboard-grid">
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Profit / loss</span>
+                  <h2>Month summary</h2>
+                </div>
+              </div>
+              <div id="reportSummary" class="report-summary"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Expense</span>
+                  <h2>Category split</h2>
+                </div>
+              </div>
+              <div id="expenseBars" class="bar-list"></div>
+            </article>
+            <article class="panel wide-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Payments</span>
+                  <h2>Method-wise movement</h2>
+                </div>
+              </div>
+              <div id="methodBars" class="bar-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="settingsView" class="view">
+          <div class="split-layout">
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Business profile</span>
+                  <h2>Bill header settings</h2>
+                </div>
+              </div>
+              <form id="settingsForm" class="form-grid">
+                <label class="full-span">
+                  <span>Business name</span>
+                  <input id="businessName" type="text" required>
+                </label>
+                <label class="full-span">
+                  <span>Address</span>
+                  <textarea id="businessAddress" rows="3"></textarea>
+                </label>
+                <label>
+                  <span>Phone</span>
+                  <input id="businessPhone" type="tel">
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input id="businessEmail" type="email">
+                </label>
+                <label>
+                  <span>GSTIN</span>
+                  <input id="businessGstin" type="text">
+                </label>
+                <label>
+                  <span>Default tax %</span>
+                  <input id="defaultTax" type="number" min="0" step="0.01">
+                </label>
+                <label>
+                  <span>Invoice prefix</span>
+                  <input id="invoicePrefix" type="text">
+                </label>
+                <label>
+                  <span>UPI ID</span>
+                  <input id="businessUpi" type="text">
+                </label>
+                <label class="full-span">
+                  <span>Bank details</span>
+                  <textarea id="businessBank" rows="3"></textarea>
+                </label>
+                <label class="full-span">
+                  <span>Logo upload</span>
+                  <input id="logoUpload" type="file" accept="image/*">
+                </label>
+                <div class="full-span action-row">
+                  <button class="primary-button" type="submit">
+                    <span data-icon="save"></span>
+                    Save settings
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Online storage</span>
+                  <h2>Cloud sync setup</h2>
+                </div>
+              </div>
+              <div class="cloud-setup">
+                <p>
+                  This version works immediately in the browser. To store the same data online for multiple devices,
+                  connect a small cloud API endpoint here, or later share Firebase/Supabase details and I can wire it fully.
+                </p>
+                <label>
+                  <span>Cloud API endpoint</span>
+                  <input id="cloudEndpoint" type="url" placeholder="https://your-api.com/resham-printers">
+                </label>
+                <label>
+                  <span>Sync token</span>
+                  <input id="cloudToken" type="password" placeholder="Optional">
+                </label>
+                <div class="action-row">
+                  <button class="ghost-button" id="saveCloudBtn" type="button">
+                    <span data-icon="save"></span>
+                    Save cloud settings
+                  </button>
+                  <button class="ghost-button" id="syncCloudBtn" type="button">
+                    <span data-icon="cloud"></span>
+                    Sync now
+                  </button>
+                </div>
+                <p class="muted" id="cloudMessage"></p>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="backup-tools">
+                <h3>Data backup</h3>
+                <p>Export a JSON backup anytime, or import one on another computer.</p>
+                <div class="action-row">
+                  <button class="ghost-button" id="settingsExportBtn" type="button">
+                    <span data-icon="download"></span>
+                    Export backup
+                  </button>
+                  <label class="file-button">
+                    <span data-icon="upload"></span>
+                    Import backup
+                    <input id="backupImport" type="file" accept="application/json">
+                  </label>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <section id="printArea" aria-hidden="true"></section>
+
+    <script src="app.js"></script>
+  </body>
+</html>
