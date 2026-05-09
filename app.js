@@ -7,11 +7,11 @@ const DEFAULT_STATE = {
     phone: "",
     email: "",
     gstin: "",
+    state: "",
     upi: "",
     bank: "",
     defaultTax: 18,
-    invoicePrefix: "RP",
-    logo: "assets/resham-logo.jpg"
+    invoicePrefix: "RP"
   },
   cloud: {
     endpoint: "",
@@ -22,7 +22,6 @@ const DEFAULT_STATE = {
   invoices: [],
   parties: [],
   items: [],
-  stockMovements: [],
   leads: [],
   employees: [
     { id: "owner", name: "Owner", role: "owner", pin: "", active: true, createdAt: "" }
@@ -52,7 +51,6 @@ const ICONS = {
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.22.4.56.74 1 .95.32.15.68.23 1.04.23H21a2 2 0 0 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>',
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>',
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>',
-  boxes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.7 12 13l8.7-5.3M12 22V13"/><path d="M7.5 5.2 16.5 10.4"/></svg>',
   scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path d="M7 8v8M10 8v8M14 8v8M17 8v8"/></svg>',
   users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.9 5.8L20 10l-6.1 2.2L12 18l-1.9-5.8L4 10l6.1-2.2L12 2z"/><path d="M19 16l.9 2.6 2.1.9-2.1.9L19 23l-.9-2.6-2.1-.9 2.1-.9L19 16z"/></svg>',
@@ -110,7 +108,6 @@ function loadState() {
       invoices: Array.isArray(saved.invoices) ? saved.invoices : [],
       parties: Array.isArray(saved.parties) ? saved.parties : [],
       items: Array.isArray(saved.items) ? saved.items : seedItems(),
-      stockMovements: Array.isArray(saved.stockMovements) ? saved.stockMovements : [],
       leads: Array.isArray(saved.leads) ? saved.leads : [],
       employees: Array.isArray(saved.employees) && saved.employees.length ? saved.employees : clone(DEFAULT_STATE.employees),
       activeEmployeeId: saved.activeEmployeeId || "owner",
@@ -164,6 +161,74 @@ function money(value) {
 function numberValue(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
+}
+
+const GST_STATE_CODES = {
+  "01": "Jammu and Kashmir",
+  "02": "Himachal Pradesh",
+  "03": "Punjab",
+  "04": "Chandigarh",
+  "05": "Uttarakhand",
+  "06": "Haryana",
+  "07": "Delhi",
+  "08": "Rajasthan",
+  "09": "Uttar Pradesh",
+  "10": "Bihar",
+  "11": "Sikkim",
+  "12": "Arunachal Pradesh",
+  "13": "Nagaland",
+  "14": "Manipur",
+  "15": "Mizoram",
+  "16": "Tripura",
+  "17": "Meghalaya",
+  "18": "Assam",
+  "19": "West Bengal",
+  "20": "Jharkhand",
+  "21": "Odisha",
+  "22": "Chhattisgarh",
+  "23": "Madhya Pradesh",
+  "24": "Gujarat",
+  "25": "Daman and Diu",
+  "26": "Dadra and Nagar Haveli",
+  "27": "Maharashtra",
+  "28": "Andhra Pradesh",
+  "29": "Karnataka",
+  "30": "Goa",
+  "31": "Lakshadweep",
+  "32": "Kerala",
+  "33": "Tamil Nadu",
+  "34": "Puducherry",
+  "35": "Andaman and Nicobar Islands",
+  "36": "Telangana",
+  "37": "Andhra Pradesh",
+  "38": "Ladakh",
+  "97": "Other Territory"
+};
+
+function parseGstin(value) {
+  const gstin = String(value || "").trim().toUpperCase();
+  if (!gstin) return { gstin: "", valid: false, message: "GSTIN not entered", stateCode: "", stateName: "" };
+  const stateCode = gstin.slice(0, 2);
+  const stateName = GST_STATE_CODES[stateCode] || "";
+  const validFormat = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin);
+  return {
+    gstin,
+    valid: validFormat && Boolean(stateName),
+    message: validFormat && stateName ? `Valid GSTIN format, ${stateName}` : "Check GSTIN format/state code",
+    stateCode,
+    stateName
+  };
+}
+
+function gstMode(invoice = currentInvoiceDraft()) {
+  if (invoice.billType !== "gst") return { type: "none", label: "No GST", place: "" };
+  const business = parseGstin(state.business.gstin);
+  const customer = parseGstin(invoice.customerGstin);
+  const place = customer.stateName || invoice.placeOfSupply || state.business.state || business.stateName || "";
+  if (business.stateCode && customer.stateCode && business.stateCode !== customer.stateCode) {
+    return { type: "inter", label: "IGST", place };
+  }
+  return { type: "intra", label: "CGST + SGST", place };
 }
 
 function escapeHtml(value) {
@@ -321,7 +386,6 @@ function setView(view) {
     dashboard: "Dashboard",
     billing: "Billing",
     masters: "Masters",
-    inventory: "Inventory",
     pos: "POS",
     crm: "CRM",
     money: "Money",
@@ -336,8 +400,6 @@ function setView(view) {
 
 function renderBusinessShell() {
   $("#sideBusinessName").textContent = state.business.name || "Resham Printers";
-  const logo = state.business.logo || "assets/resham-logo.jpg";
-  $("#sideLogo").src = logo;
   $("#storageLabel").textContent = state.cloud.endpoint ? "Cloud configured" : "Local browser";
   $("#storageDot").classList.toggle("online", Boolean(state.cloud.endpoint));
   $("#todayLabel").textContent = new Date().toLocaleDateString("en-IN", {
@@ -438,7 +500,6 @@ function emptyState(message) {
   return `
     <div class="empty-state">
       <div>
-        <img src="assets/resham-logo.jpg" alt="">
         <strong>${escapeHtml(message)}</strong>
       </div>
     </div>
@@ -512,6 +573,7 @@ function currentInvoiceDraft() {
     customerPhone: $("#customerPhone").value.trim(),
     customerAddress: $("#customerAddress").value.trim(),
     customerGstin: $("#customerGstin").value.trim(),
+    placeOfSupply: $("#placeOfSupply").value.trim(),
     paymentMethod: $("#invoicePaymentMethod").value,
     items: invoiceItems
       .map((item) => ({
@@ -534,26 +596,30 @@ function currentInvoiceDraft() {
 function renderInvoiceSummary() {
   const draft = currentInvoiceDraft();
   const calc = calculateInvoice(draft);
+  const mode = gstMode(draft);
   $("#invoiceSummary").innerHTML = `
     <div class="summary-row"><span>Subtotal</span><strong>${money(calc.taxable)}</strong></div>
-    <div class="summary-row"><span>GST</span><strong>${money(calc.tax)}</strong></div>
+    <div class="summary-row"><span>GST ${mode.type === "none" ? "" : `(${mode.label})`}</span><strong>${money(calc.tax)}</strong></div>
     <div class="summary-row"><span>Discount</span><strong>${money(calc.discount)}</strong></div>
     <div class="summary-row summary-total"><span>Total</span><strong>${money(calc.total)}</strong></div>
     <div class="summary-row"><span>Pending</span><strong>${money(calc.due)}</strong></div>
+    ${mode.place ? `<div class="summary-row"><span>Place of supply</span><strong>${escapeHtml(mode.place)}</strong></div>` : ""}
   `;
 }
 
 function resetInvoiceForm() {
   editingInvoiceId = null;
-  $("#billingFormTitle").textContent = "New invoice";
+  $("#billingFormTitle").textContent = "GST Billing Entry";
   $("#invoiceForm").reset();
   $("#billType").value = "gst";
   $("#invoiceDate").value = todayISO();
   $("#invoicePaymentMethod").value = state.paymentMethods[0] || "Cash";
   $("#invoiceDiscount").value = 0;
   $("#invoicePaid").value = 0;
+  $("#placeOfSupply").value = "";
   invoiceItems = [createBlankItem({ description: "Printing work", qty: 1, rate: 0 })];
   renderItemEditor();
+  renderGstinInfo();
 }
 
 function renderInvoiceList() {
@@ -708,12 +774,14 @@ function loadInvoiceIntoForm(id) {
   $("#customerPhone").value = invoice.customerPhone || "";
   $("#customerAddress").value = invoice.customerAddress || "";
   $("#customerGstin").value = invoice.customerGstin || "";
+  $("#placeOfSupply").value = invoice.placeOfSupply || parseGstin(invoice.customerGstin).stateName || "";
   $("#invoicePaymentMethod").value = invoice.paymentMethod || state.paymentMethods[0];
   $("#invoiceDiscount").value = invoice.discount || 0;
   $("#invoicePaid").value = invoice.paid || 0;
   $("#invoiceNotes").value = invoice.notes || "";
   invoiceItems = (invoice.items || []).length ? clone(invoice.items) : [createBlankItem()];
   renderItemEditor();
+  renderGstinInfo();
   setView("billing");
   showToast(`Loaded ${invoice.number}.`);
 }
@@ -737,9 +805,9 @@ function printInvoice(invoice) {
 function renderInvoicePrint(invoice) {
   const calc = calculateInvoice(invoice);
   const business = state.business;
-  const logo = business.logo || "assets/resham-logo.jpg";
   const title = invoiceTitle(invoice.billType);
   const showTax = invoice.billType === "gst";
+  const mode = gstMode(invoice);
   const colCount = showTax ? 9 : 7;
   const rows = calc.items.map((item, index) => {
     const amount = item.qty * item.rate;
@@ -772,13 +840,13 @@ function renderInvoicePrint(invoice) {
   return `
     <div class="print-document">
       <header class="print-header">
-        <img class="print-logo" src="${escapeHtml(logo)}" alt="">
         <div>
           <h1>${escapeHtml(business.name || "Resham Printers")}</h1>
           <p>${nl2br(business.address || "")}</p>
           ${business.phone ? `<p>Phone: ${escapeHtml(business.phone)}</p>` : ""}
           ${business.email ? `<p>Email: ${escapeHtml(business.email)}</p>` : ""}
           ${business.gstin ? `<p>GSTIN: ${escapeHtml(business.gstin)}</p>` : ""}
+          ${business.state ? `<p>State: ${escapeHtml(business.state)}</p>` : ""}
         </div>
         <div class="print-title-box">
           <strong>${title}</strong>
@@ -794,10 +862,12 @@ function renderInvoicePrint(invoice) {
           ${invoice.customerPhone ? `<p>Phone: ${escapeHtml(invoice.customerPhone)}</p>` : ""}
           ${invoice.customerAddress ? `<p>${nl2br(invoice.customerAddress)}</p>` : ""}
           ${invoice.customerGstin ? `<p>GSTIN: ${escapeHtml(invoice.customerGstin)}</p>` : ""}
+          ${mode.place ? `<p>Place of Supply: ${escapeHtml(mode.place)}</p>` : ""}
         </div>
         <div class="print-box">
           <h2>Payment Details</h2>
           <p>Method: ${escapeHtml(invoice.paymentMethod || "Cash")}</p>
+          ${showTax ? `<p>Tax Type: ${escapeHtml(mode.label)}</p>` : ""}
           ${business.upi ? `<p>UPI: ${escapeHtml(business.upi)}</p>` : ""}
           ${business.bank ? `<p>${nl2br(business.bank)}</p>` : ""}
         </div>
@@ -834,7 +904,8 @@ function renderInvoicePrint(invoice) {
         <div class="total-box">
           <h2>Summary</h2>
           <div class="total-line"><span>Subtotal</span><strong>${money(calc.taxable)}</strong></div>
-          ${showTax ? `<div class="total-line"><span>CGST</span><strong>${money(calc.tax / 2)}</strong></div><div class="total-line"><span>SGST</span><strong>${money(calc.tax / 2)}</strong></div>` : ""}
+          ${showTax && mode.type === "inter" ? `<div class="total-line"><span>IGST</span><strong>${money(calc.tax)}</strong></div>` : ""}
+          ${showTax && mode.type !== "inter" ? `<div class="total-line"><span>CGST</span><strong>${money(calc.tax / 2)}</strong></div><div class="total-line"><span>SGST</span><strong>${money(calc.tax / 2)}</strong></div>` : ""}
           <div class="total-line"><span>Discount</span><strong>${money(calc.discount)}</strong></div>
           <div class="total-line grand"><span>Total</span><strong>${money(calc.total)}</strong></div>
           <div class="total-line"><span>Received</span><strong>${money(calc.paid)}</strong></div>
@@ -1268,143 +1339,6 @@ function deleteItemMaster(id) {
   showToast("Item deleted.");
 }
 
-function inventoryRows() {
-  const map = new Map();
-  state.items.forEach((item) => {
-    map.set(item.name, {
-      name: item.name,
-      hsn: item.hsn || "",
-      unit: item.unit || "job",
-      barcode: item.barcode || "",
-      qty: 0,
-      value: 0,
-      rate: numberValue(item.rate)
-    });
-  });
-
-  state.stockMovements.forEach((movement) => {
-    const key = movement.itemName || "Unknown item";
-    const row = map.get(key) || { name: key, hsn: "", unit: movement.unit || "job", barcode: movement.barcode || "", qty: 0, value: 0, rate: 0 };
-    const sign = movement.type === "sale" ? -1 : 1;
-    const qty = sign * numberValue(movement.qty);
-    row.qty += qty;
-    row.value += qty * numberValue(movement.cost);
-    row.barcode = row.barcode || movement.barcode || "";
-    row.unit = row.unit || movement.unit || "job";
-    map.set(key, row);
-  });
-
-  state.invoices.forEach((invoice) => {
-    if (invoice.billType === "estimate") return;
-    (invoice.items || []).forEach((line) => {
-      const key = line.description || "Unknown item";
-      const row = map.get(key) || { name: key, hsn: line.hsn || "", unit: line.unit || "job", barcode: "", qty: 0, value: 0, rate: numberValue(line.rate) };
-      row.qty -= numberValue(line.qty);
-      row.rate = numberValue(line.rate);
-      row.unit = line.unit || row.unit;
-      row.hsn = line.hsn || row.hsn;
-      map.set(key, row);
-    });
-  });
-
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function renderInventory() {
-  const target = $("#inventoryTable");
-  const search = $("#inventorySearch").value.trim().toLowerCase();
-  const rows = inventoryRows().filter((row) => {
-    const text = `${row.name} ${row.hsn} ${row.unit} ${row.barcode}`.toLowerCase();
-    return !search || text.includes(search);
-  });
-  if (!rows.length) {
-    target.innerHTML = emptyState("Inventory will appear after items or stock entries are saved.");
-    return;
-  }
-  target.innerHTML = `
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>HSN</th>
-          <th>Unit</th>
-          <th>Barcode</th>
-          <th class="amount-cell">Stock</th>
-          <th class="amount-cell">Rate</th>
-          <th>Alert</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map((row) => `
-          <tr>
-            <td><strong>${escapeHtml(row.name)}</strong></td>
-            <td>${escapeHtml(row.hsn || "-")}</td>
-            <td>${escapeHtml(row.unit || "-")}</td>
-            <td>${escapeHtml(row.barcode || "-")}</td>
-            <td class="amount-cell">${numberValue(row.qty).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
-            <td class="amount-cell">${money(row.rate)}</td>
-            <td>${row.qty < 0 ? '<span class="pill due">Negative</span>' : row.qty <= 5 ? '<span class="pill partial">Low</span>' : '<span class="pill paid">OK</span>'}</td>
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
-  `;
-}
-
-function saveStockMovement(event) {
-  event.preventDefault();
-  const itemName = $("#stockItemName").value.trim();
-  if (!itemName) {
-    showToast("Please enter stock item.");
-    return;
-  }
-  const master = findItemByName(itemName);
-  const movement = {
-    id: uid("stock"),
-    itemName,
-    type: $("#stockType").value,
-    qty: numberValue($("#stockQty").value),
-    cost: numberValue($("#stockCost").value),
-    vendor: $("#stockVendor").value.trim(),
-    barcode: $("#stockBarcode").value.trim(),
-    unit: master?.unit || "job",
-    date: todayISO(),
-    note: $("#stockNote").value.trim(),
-    createdAt: new Date().toISOString()
-  };
-  if (movement.qty <= 0) {
-    showToast("Quantity must be greater than zero.");
-    return;
-  }
-  state.stockMovements.unshift(movement);
-  if (!master) {
-    state.items.unshift({
-      id: uid("item"),
-      name: itemName,
-      hsn: "",
-      unit: "job",
-      rate: movement.cost,
-      tax: state.business.defaultTax || 18,
-      barcode: movement.barcode,
-      createdAt: new Date().toISOString()
-    });
-  } else if (movement.barcode) {
-    state.items = state.items.map((item) => item.id === master.id ? { ...item, barcode: movement.barcode } : item);
-  }
-  if (movement.vendor) {
-    const vendor = findPartyByName(movement.vendor);
-    if (!vendor) {
-      state.parties.unshift({ id: uid("party"), type: "supplier", name: movement.vendor, phone: "", gstin: "", address: "", opening: 0, createdAt: new Date().toISOString() });
-    }
-  }
-  saveState();
-  $("#stockForm").reset();
-  $("#stockQty").value = 1;
-  $("#stockCost").value = 0;
-  renderAll();
-  showToast("Stock entry saved.");
-}
-
 function addPosItem() {
   const value = $("#posBarcode").value.trim();
   if (!value) {
@@ -1610,10 +1544,6 @@ function renderCRM() {
 }
 
 function generatedNotifications() {
-  const stockAlerts = inventoryRows()
-    .filter((row) => row.qty <= 5)
-    .slice(0, 4)
-    .map((row) => ({ title: `${row.name} stock is ${row.qty < 0 ? "negative" : "low"}`, body: "Review purchase or stock adjustment.", type: row.qty < 0 ? "danger" : "warning" }));
   const followUps = state.leads
     .filter((lead) => lead.followUp && lead.followUp <= todayISO() && !["won", "lost"].includes(lead.status))
     .slice(0, 4)
@@ -1622,7 +1552,7 @@ function generatedNotifications() {
     .filter((row) => row.due > 0)
     .slice(0, 4)
     .map((row) => ({ title: `${row.name} payment pending`, body: `${money(row.due)} due.`, type: "warning" }));
-  return [...stockAlerts, ...followUps, ...pending, ...state.notifications].slice(0, 10);
+  return [...followUps, ...pending, ...state.notifications].slice(0, 10);
 }
 
 function renderNotifications() {
@@ -1771,6 +1701,7 @@ function renderSettingsForm() {
   $("#businessPhone").value = state.business.phone || "";
   $("#businessEmail").value = state.business.email || "";
   $("#businessGstin").value = state.business.gstin || "";
+  $("#businessState").value = state.business.state || parseGstin(state.business.gstin).stateName || "";
   $("#defaultTax").value = state.business.defaultTax ?? 0;
   $("#invoicePrefix").value = state.business.invoicePrefix || "RP";
   $("#businessUpi").value = state.business.upi || "";
@@ -1780,6 +1711,7 @@ function renderSettingsForm() {
   $("#cloudMessage").textContent = state.cloud.lastSync
     ? `Last sync attempt: ${new Date(state.cloud.lastSync).toLocaleString("en-IN")}`
     : "Cloud is not connected yet.";
+  renderGstinInfo();
 }
 
 function saveSettings(event) {
@@ -1791,6 +1723,7 @@ function saveSettings(event) {
     phone: $("#businessPhone").value.trim(),
     email: $("#businessEmail").value.trim(),
     gstin: $("#businessGstin").value.trim(),
+    state: $("#businessState").value.trim() || parseGstin($("#businessGstin").value).stateName,
     defaultTax: numberValue($("#defaultTax").value),
     invoicePrefix: $("#invoicePrefix").value.trim() || "RP",
     upi: $("#businessUpi").value.trim(),
@@ -1845,19 +1778,6 @@ async function syncCloud() {
   }
 }
 
-function handleLogoUpload(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    state.business.logo = String(reader.result);
-    saveState();
-    renderAll();
-    showToast("Logo added.");
-  };
-  reader.readAsDataURL(file);
-}
-
 function downloadFile(filename, content, type) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -1893,7 +1813,6 @@ function importBackup(event) {
         cloud: { ...clone(DEFAULT_STATE.cloud), ...(imported.cloud || {}) },
         parties: Array.isArray(imported.parties) ? imported.parties : [],
         items: Array.isArray(imported.items) ? imported.items : seedItems(),
-        stockMovements: Array.isArray(imported.stockMovements) ? imported.stockMovements : [],
         leads: Array.isArray(imported.leads) ? imported.leads : [],
         employees: Array.isArray(imported.employees) && imported.employees.length ? imported.employees : clone(DEFAULT_STATE.employees),
         activeEmployeeId: imported.activeEmployeeId || "owner",
@@ -1942,7 +1861,6 @@ function printLedger() {
   $("#printArea").innerHTML = `
     <div class="print-document">
       <header class="print-header">
-        <img class="print-logo" src="${escapeHtml(state.business.logo || "assets/resham-logo.jpg")}" alt="">
         <div>
           <h1>${escapeHtml(state.business.name || "Resham Printers")}</h1>
           <p>${nl2br(state.business.address || "")}</p>
@@ -1987,7 +1905,6 @@ function printReport() {
   $("#printArea").innerHTML = `
     <div class="print-document">
       <header class="print-header">
-        <img class="print-logo" src="${escapeHtml(state.business.logo || "assets/resham-logo.jpg")}" alt="">
         <div>
           <h1>${escapeHtml(state.business.name || "Resham Printers")}</h1>
           <p>${nl2br(state.business.address || "")}</p>
@@ -2022,7 +1939,6 @@ function renderAll() {
   renderDashboard();
   renderInvoiceList();
   renderMasters();
-  renderInventory();
   renderPos();
   renderCRM();
   renderTransactions();
@@ -2039,6 +1955,36 @@ function applyPartyDetailsToInvoice() {
   $("#customerPhone").value = party.phone || "";
   $("#customerAddress").value = party.address || "";
   $("#customerGstin").value = party.gstin || "";
+  $("#placeOfSupply").value = parseGstin(party.gstin).stateName || "";
+  renderGstinInfo();
+}
+
+function renderGstinInfo() {
+  const customerInfo = $("#customerGstinInfo");
+  const businessInfo = $("#businessGstinInfo");
+  const customer = parseGstin($("#customerGstin")?.value || "");
+  const business = parseGstin(state.business.gstin || $("#businessGstin")?.value || "");
+
+  if (customerInfo) {
+    if (customer.stateName && !$("#placeOfSupply").value) {
+      $("#placeOfSupply").value = customer.stateName;
+    }
+    const draft = currentInvoiceDraft();
+    const mode = gstMode(draft);
+    customerInfo.innerHTML = `
+      <span class="${customer.valid ? "ok" : "warn"}">${escapeHtml(customer.message)}</span>
+      ${mode.type !== "none" ? `<span>${escapeHtml(mode.label)} will apply${mode.place ? ` for ${escapeHtml(mode.place)}` : ""}.</span>` : ""}
+    `;
+  }
+
+  if (businessInfo) {
+    const stateName = business.stateName || state.business.state || "";
+    businessInfo.innerHTML = `<span class="${business.valid ? "ok" : "warn"}">${escapeHtml(business.message)}</span>${stateName ? `<span>Business state: ${escapeHtml(stateName)}</span>` : ""}`;
+    if ($("#businessState") && !$("#businessState").value && stateName) {
+      $("#businessState").value = stateName;
+    }
+  }
+  renderInvoiceSummary();
 }
 
 function bindEvents() {
@@ -2060,6 +2006,8 @@ function bindEvents() {
   $("#backupImport").addEventListener("change", importBackup);
   $("#invoiceForm").addEventListener("submit", saveInvoice);
   $("#customerName").addEventListener("change", applyPartyDetailsToInvoice);
+  $("#customerGstin").addEventListener("input", renderGstinInfo);
+  $("#placeOfSupply").addEventListener("input", renderInvoiceSummary);
   $("#clearInvoiceBtn").addEventListener("click", resetInvoiceForm);
   $("#billType").addEventListener("change", renderInvoiceSummary);
   $("#invoiceDiscount").addEventListener("input", renderInvoiceSummary);
@@ -2168,8 +2116,6 @@ function bindEvents() {
     if (itemEdit) loadItemIntoForm(itemEdit.dataset.itemEdit);
     if (itemDelete) deleteItemMaster(itemDelete.dataset.itemDelete);
   });
-  $("#stockForm").addEventListener("submit", saveStockMovement);
-  $("#inventorySearch").addEventListener("input", renderInventory);
   $("#addPosItemBtn").addEventListener("click", addPosItem);
   $("#posBarcode").addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -2223,7 +2169,8 @@ function bindEvents() {
   $("#exportCsvBtn").addEventListener("click", exportCsv);
   $("#printReportBtn").addEventListener("click", printReport);
   $("#settingsForm").addEventListener("submit", saveSettings);
-  $("#logoUpload").addEventListener("change", handleLogoUpload);
+  $("#businessGstin").addEventListener("input", renderGstinInfo);
+  $("#businessState").addEventListener("input", renderGstinInfo);
   $("#saveCloudBtn").addEventListener("click", saveCloudSettings);
   $("#syncCloudBtn").addEventListener("click", syncCloud);
 }

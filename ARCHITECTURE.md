@@ -6,7 +6,7 @@ This project is a static GitHub Pages app:
 
 - Frontend: `index.html`, `styles.css`, `app.js`
 - Persistence: browser `localStorage`
-- Assets: local logo image and SVG fallback
+- Assets: no logo is displayed in the app or print layouts by request
 - Deployment: GitHub Pages from the `main` branch
 
 Because GitHub Pages only serves static files, the current version does not have a real backend process,
@@ -17,13 +17,12 @@ BUSY / Zoho Books / Tally-style business suite while staying free to host.
 
 - Billing: GST invoice, simple bill, estimate, print/PDF through browser print, WhatsApp and email share links
 - Masters: customer/supplier party master and item/service master with HSN/SAC, unit, GST, rate, barcode/SKU
-- Inventory: stock in/out/adjustment, valuation, low/negative stock alerts
 - POS: scan/search cart, fast checkout, POS invoice creation
 - Accounting: money-in/money-out register, ledger, pending payments, monthly reports, CSV export
 - CRM: leads, follow-ups, expected value, assigned owner
 - Roles: employee role records and active-user selection for UI-level access planning
 - Analytics: cashflow, profit/loss, method-wise reports, AI-style insight cards
-- Notifications: stock alerts, CRM follow-ups, pending collection reminders
+- Notifications: CRM follow-ups and pending collection reminders
 - AI workflows: browser voice command support where available, OCR placeholder ready for a cloud OCR service
 
 ## Production upgrade path
