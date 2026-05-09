@@ -7,6 +7,10 @@ A first working billing and ledger website for Resham Printers.
 - Create GST invoices, simple bills, and estimates.
 - Busy-style party/customer masters and item/service masters.
 - Add printing services/items with HSN/SAC, unit, GST %, discounts, received amount, and pending amount.
+- Inventory stock entries, valuation, barcode/SKU fields, and low-stock alerts.
+- POS counter billing with scan/search cart, checkout bill, print/PDF, WhatsApp, and email actions.
+- CRM leads, follow-ups, employee role records, notifications, and analytics insights.
+- Browser AI desk with OCR/voice workflows ready for cloud AI integration.
 - Print a clean A4 bill from the browser.
 - Track money in and money out with payment methods.
 - See customer ledger, pending dues, monthly reports, and CSV export.
@@ -31,4 +35,5 @@ files are pushed to a GitHub repository.
 - `index.html` - app structure
 - `styles.css` - responsive design and print layout
 - `app.js` - billing, ledger, reports, backup, and cloud-sync logic
-- `assets/resham-mark.svg` - temporary brand logo until the real logo is added
+- `assets/resham-logo.jpg` - Resham Printers logo/photo provided by the user
+- `ARCHITECTURE.md` - implementation notes and cloud upgrade path

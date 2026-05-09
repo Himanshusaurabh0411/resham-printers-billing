@@ -10,7 +10,7 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand-block">
-          <img id="sideLogo" class="brand-logo" src="assets/resham-mark.svg" alt="Resham Printers logo">
+          <img id="sideLogo" class="brand-logo" src="assets/resham-logo.jpg" alt="Resham Printers logo">
           <div>
             <strong id="sideBusinessName">Resham Printers</strong>
             <span>Billing and ledger</span>
@@ -30,6 +30,18 @@
             <span data-icon="database"></span>
             <span>Masters</span>
           </button>
+          <button class="nav-tab" data-view="inventory" type="button">
+            <span data-icon="boxes"></span>
+            <span>Inventory</span>
+          </button>
+          <button class="nav-tab" data-view="pos" type="button">
+            <span data-icon="scan"></span>
+            <span>POS</span>
+          </button>
+          <button class="nav-tab" data-view="crm" type="button">
+            <span data-icon="users"></span>
+            <span>CRM</span>
+          </button>
           <button class="nav-tab" data-view="money" type="button">
             <span data-icon="wallet"></span>
             <span>Money</span>
@@ -41,6 +53,10 @@
           <button class="nav-tab" data-view="reports" type="button">
             <span data-icon="chart"></span>
             <span>Reports</span>
+          </button>
+          <button class="nav-tab" data-view="ai" type="button">
+            <span data-icon="spark"></span>
+            <span>AI Desk</span>
           </button>
           <button class="nav-tab" data-view="settings" type="button">
             <span data-icon="settings"></span>
@@ -335,6 +351,256 @@
           </div>
         </section>
 
+        <section id="inventoryView" class="view">
+          <div class="split-layout inventory-layout">
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Inventory</span>
+                  <h2>Stock purchase / adjustment</h2>
+                </div>
+              </div>
+              <form id="stockForm" class="form-grid">
+                <label>
+                  <span>Item</span>
+                  <input id="stockItemName" type="text" list="itemOptions" placeholder="Paper, ink, banner roll" required>
+                </label>
+                <label>
+                  <span>Movement</span>
+                  <select id="stockType">
+                    <option value="purchase">Purchase / stock in</option>
+                    <option value="sale">Sale / stock out</option>
+                    <option value="adjustment">Adjustment</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Quantity</span>
+                  <input id="stockQty" type="number" step="0.01" value="1" required>
+                </label>
+                <label>
+                  <span>Unit cost</span>
+                  <input id="stockCost" type="number" min="0" step="0.01" value="0">
+                </label>
+                <label>
+                  <span>Vendor</span>
+                  <input id="stockVendor" type="text" list="partyOptions" placeholder="Supplier">
+                </label>
+                <label>
+                  <span>Barcode / SKU</span>
+                  <input id="stockBarcode" type="text" placeholder="Scan or type code">
+                </label>
+                <label class="full-span">
+                  <span>Note</span>
+                  <textarea id="stockNote" rows="2" placeholder="Bill no, batch, machine, location"></textarea>
+                </label>
+                <div class="full-span action-row">
+                  <button class="primary-button" type="submit">
+                    <span data-icon="save"></span>
+                    Save stock
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Live stock</span>
+                  <h2>Inventory valuation and alerts</h2>
+                </div>
+                <label class="search-box">
+                  <span data-icon="search"></span>
+                  <input id="inventorySearch" type="search" placeholder="Search stock">
+                </label>
+              </div>
+              <div id="inventoryTable" class="table-shell"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="posView" class="view">
+          <div class="split-layout pos-layout">
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">POS</span>
+                  <h2>Barcode billing counter</h2>
+                </div>
+                <button class="ghost-button small-button" id="clearPosBtn" type="button">
+                  <span data-icon="rotate"></span>
+                  Clear
+                </button>
+              </div>
+              <form id="posForm" class="form-grid">
+                <label class="full-span">
+                  <span>Scan barcode / search item</span>
+                  <input id="posBarcode" type="text" list="itemOptions" placeholder="Scan barcode or type item name">
+                </label>
+                <label>
+                  <span>Customer</span>
+                  <input id="posCustomer" type="text" list="partyOptions" placeholder="Walk-in customer">
+                </label>
+                <label>
+                  <span>Paid by</span>
+                  <select id="posMethod"></select>
+                </label>
+                <div class="full-span action-row">
+                  <button class="primary-button" id="addPosItemBtn" type="button">
+                    <span data-icon="plus"></span>
+                    Add to cart
+                  </button>
+                  <button class="ghost-button" id="voicePosBtn" type="button">
+                    <span data-icon="mic"></span>
+                    Voice
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Counter cart</span>
+                  <h2>Fast checkout</h2>
+                </div>
+              </div>
+              <div id="posCart" class="stack-list"></div>
+              <div class="invoice-summary pos-summary" id="posSummary"></div>
+              <div class="action-row pos-actions">
+                <button class="primary-button" id="checkoutPosBtn" type="button">
+                  <span data-icon="receipt"></span>
+                  Checkout bill
+                </button>
+                <button class="ghost-button" id="printLastInvoiceBtn" type="button">
+                  <span data-icon="printer"></span>
+                  Print/PDF
+                </button>
+                <button class="ghost-button" id="whatsappLastInvoiceBtn" type="button">
+                  <span data-icon="send"></span>
+                  WhatsApp
+                </button>
+                <button class="ghost-button" id="emailLastInvoiceBtn" type="button">
+                  <span data-icon="mail"></span>
+                  Email
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="crmView" class="view">
+          <div class="split-layout crm-layout">
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">CRM</span>
+                  <h2>Lead and follow-up desk</h2>
+                </div>
+              </div>
+              <form id="leadForm" class="form-grid">
+                <input id="leadId" type="hidden">
+                <label>
+                  <span>Lead name</span>
+                  <input id="leadName" type="text" placeholder="Customer / company" required>
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select id="leadStatus">
+                    <option value="new">New</option>
+                    <option value="quoted">Quoted</option>
+                    <option value="follow-up">Follow-up</option>
+                    <option value="won">Won</option>
+                    <option value="lost">Lost</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Phone</span>
+                  <input id="leadPhone" type="tel" placeholder="Mobile">
+                </label>
+                <label>
+                  <span>Expected value</span>
+                  <input id="leadValue" type="number" min="0" step="0.01" value="0">
+                </label>
+                <label>
+                  <span>Next follow-up</span>
+                  <input id="leadFollowUp" type="date">
+                </label>
+                <label>
+                  <span>Assigned to</span>
+                  <input id="leadOwner" type="text" placeholder="Employee">
+                </label>
+                <label class="full-span">
+                  <span>Requirement</span>
+                  <textarea id="leadNote" rows="2" placeholder="What printing work do they need?"></textarea>
+                </label>
+                <div class="full-span action-row">
+                  <button class="primary-button" type="submit">
+                    <span data-icon="save"></span>
+                    Save lead
+                  </button>
+                  <button class="ghost-button" id="clearLeadBtn" type="button">
+                    <span data-icon="rotate"></span>
+                    Clear
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Security</span>
+                  <h2>Employee roles</h2>
+                </div>
+              </div>
+              <form id="employeeForm" class="form-grid">
+                <input id="employeeId" type="hidden">
+                <label>
+                  <span>Name</span>
+                  <input id="employeeName" type="text" placeholder="Employee name" required>
+                </label>
+                <label>
+                  <span>Role</span>
+                  <select id="employeeRole">
+                    <option value="owner">Owner</option>
+                    <option value="manager">Manager</option>
+                    <option value="billing">Billing staff</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                </label>
+                <label>
+                  <span>PIN</span>
+                  <input id="employeePin" type="password" inputmode="numeric" placeholder="Local PIN">
+                </label>
+                <label>
+                  <span>Active user</span>
+                  <select id="activeEmployee"></select>
+                </label>
+                <div class="full-span action-row">
+                  <button class="primary-button" type="submit">
+                    <span data-icon="save"></span>
+                    Save employee
+                  </button>
+                  <button class="ghost-button" id="clearEmployeeBtn" type="button">
+                    <span data-icon="rotate"></span>
+                    Clear
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel wide-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Pipeline</span>
+                  <h2>Leads, follow-ups, staff</h2>
+                </div>
+              </div>
+              <div id="crmTables" class="masters-grid"></div>
+            </article>
+          </div>
+        </section>
+
         <section id="moneyView" class="view">
           <div class="split-layout money-layout">
             <article class="panel form-panel">
@@ -470,6 +736,57 @@
                 </div>
               </div>
               <div id="methodBars" class="bar-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="aiView" class="view">
+          <div class="split-layout ai-layout">
+            <article class="panel form-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">AI assist</span>
+                  <h2>OCR, voice, insights</h2>
+                </div>
+              </div>
+              <div class="ai-tools">
+                <label>
+                  <span>Scan purchase bill / job note</span>
+                  <input id="ocrUpload" type="file" accept="image/*,.pdf">
+                </label>
+                <div id="ocrResult" class="ai-result">Upload a bill image to extract useful fields into a draft note.</div>
+                <div class="action-row">
+                  <button class="ghost-button" id="startVoiceBtn" type="button">
+                    <span data-icon="mic"></span>
+                    Start voice billing
+                  </button>
+                  <button class="ghost-button" id="copyInsightBtn" type="button">
+                    <span data-icon="copy"></span>
+                    Copy insights
+                  </button>
+                </div>
+                <div id="voiceResult" class="ai-result">Voice command examples: "bill visiting cards 2 at 750" or "add flex banner 5 at 120".</div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Forecast</span>
+                  <h2>Business insights</h2>
+                </div>
+              </div>
+              <div id="aiInsights" class="insight-list"></div>
+            </article>
+
+            <article class="panel wide-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="eyebrow">Notifications</span>
+                  <h2>Action center</h2>
+                </div>
+              </div>
+              <div id="notificationList" class="stack-list"></div>
             </article>
           </div>
         </section>

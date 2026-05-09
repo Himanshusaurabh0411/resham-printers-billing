@@ -11,7 +11,7 @@ const DEFAULT_STATE = {
     bank: "",
     defaultTax: 18,
     invoicePrefix: "RP",
-    logo: ""
+    logo: "assets/resham-logo.jpg"
   },
   cloud: {
     endpoint: "",
@@ -22,6 +22,13 @@ const DEFAULT_STATE = {
   invoices: [],
   parties: [],
   items: [],
+  stockMovements: [],
+  leads: [],
+  employees: [
+    { id: "owner", name: "Owner", role: "owner", pin: "", active: true, createdAt: "" }
+  ],
+  activeEmployeeId: "owner",
+  notifications: [],
   transactions: [],
   paymentMethods: ["Cash", "UPI", "Bank transfer", "Cheque", "Card"]
 };
@@ -45,6 +52,14 @@ const ICONS = {
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.22.4.56.74 1 .95.32.15.68.23 1.04.23H21a2 2 0 0 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>',
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>',
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>',
+  boxes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.7 12 13l8.7-5.3M12 22V13"/><path d="M7.5 5.2 16.5 10.4"/></svg>',
+  scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path d="M7 8v8M10 8v8M14 8v8M17 8v8"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.9 5.8L20 10l-6.1 2.2L12 18l-1.9-5.8L4 10l6.1-2.2L12 2z"/><path d="M19 16l.9 2.6 2.1.9-2.1.9L19 23l-.9-2.6-2.1-.9 2.1-.9L19 16z"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><rect x="2" y="2" width="13" height="13" rx="2"/></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
   save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>',
   printer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/><path d="M18 12h.01"/></svg>',
@@ -62,6 +77,8 @@ let state = loadState();
 let currentView = "dashboard";
 let editingInvoiceId = null;
 let invoiceItems = [createBlankItem()];
+let posCart = [];
+let lastInvoiceId = null;
 let toastTimer = null;
 
 function clone(value) {
@@ -93,6 +110,11 @@ function loadState() {
       invoices: Array.isArray(saved.invoices) ? saved.invoices : [],
       parties: Array.isArray(saved.parties) ? saved.parties : [],
       items: Array.isArray(saved.items) ? saved.items : seedItems(),
+      stockMovements: Array.isArray(saved.stockMovements) ? saved.stockMovements : [],
+      leads: Array.isArray(saved.leads) ? saved.leads : [],
+      employees: Array.isArray(saved.employees) && saved.employees.length ? saved.employees : clone(DEFAULT_STATE.employees),
+      activeEmployeeId: saved.activeEmployeeId || "owner",
+      notifications: Array.isArray(saved.notifications) ? saved.notifications : [],
       transactions: Array.isArray(saved.transactions) ? saved.transactions : [],
       paymentMethods: Array.isArray(saved.paymentMethods) ? saved.paymentMethods : clone(DEFAULT_STATE.paymentMethods)
     };
@@ -299,9 +321,13 @@ function setView(view) {
     dashboard: "Dashboard",
     billing: "Billing",
     masters: "Masters",
+    inventory: "Inventory",
+    pos: "POS",
+    crm: "CRM",
     money: "Money",
     ledger: "Ledger",
     reports: "Reports",
+    ai: "AI Desk",
     settings: "Settings"
   };
   $("#viewTitle").textContent = labels[view] || "Dashboard";
@@ -310,7 +336,7 @@ function setView(view) {
 
 function renderBusinessShell() {
   $("#sideBusinessName").textContent = state.business.name || "Resham Printers";
-  const logo = state.business.logo || "assets/resham-mark.svg";
+  const logo = state.business.logo || "assets/resham-logo.jpg";
   $("#sideLogo").src = logo;
   $("#storageLabel").textContent = state.cloud.endpoint ? "Cloud configured" : "Local browser";
   $("#storageDot").classList.toggle("online", Boolean(state.cloud.endpoint));
@@ -326,12 +352,16 @@ function renderPaymentOptions() {
   const options = state.paymentMethods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
   const invoiceMethod = $("#invoicePaymentMethod");
   const transactionMethod = $("#transactionMethod");
+  const posMethod = $("#posMethod");
   const currentInvoice = invoiceMethod.value;
   const currentTransaction = transactionMethod.value;
+  const currentPos = posMethod?.value;
   invoiceMethod.innerHTML = options;
   transactionMethod.innerHTML = options;
+  if (posMethod) posMethod.innerHTML = options;
   invoiceMethod.value = state.paymentMethods.includes(currentInvoice) ? currentInvoice : state.paymentMethods[0];
   transactionMethod.value = state.paymentMethods.includes(currentTransaction) ? currentTransaction : state.paymentMethods[0];
+  if (posMethod) posMethod.value = state.paymentMethods.includes(currentPos) ? currentPos : state.paymentMethods[0];
 }
 
 function renderMasterOptions() {
@@ -408,7 +438,7 @@ function emptyState(message) {
   return `
     <div class="empty-state">
       <div>
-        <img src="assets/resham-mark.svg" alt="">
+        <img src="assets/resham-logo.jpg" alt="">
         <strong>${escapeHtml(message)}</strong>
       </div>
     </div>
@@ -561,6 +591,14 @@ function renderInvoiceList() {
           <span data-icon="printer"></span>
           Print
         </button>
+        <button class="ghost-button small-button" type="button" data-invoice-whatsapp="${invoice.id}">
+          <span data-icon="send"></span>
+          WhatsApp
+        </button>
+        <button class="ghost-button small-button" type="button" data-invoice-email="${invoice.id}">
+          <span data-icon="mail"></span>
+          Email
+        </button>
         <button class="ghost-button small-button" type="button" data-invoice-delete="${invoice.id}">
           <span data-icon="trash"></span>
           Delete
@@ -699,7 +737,7 @@ function printInvoice(invoice) {
 function renderInvoicePrint(invoice) {
   const calc = calculateInvoice(invoice);
   const business = state.business;
-  const logo = business.logo || "assets/resham-mark.svg";
+  const logo = business.logo || "assets/resham-logo.jpg";
   const title = invoiceTitle(invoice.billType);
   const showTax = invoice.billType === "gst";
   const colCount = showTax ? 9 : 7;
@@ -1230,6 +1268,449 @@ function deleteItemMaster(id) {
   showToast("Item deleted.");
 }
 
+function inventoryRows() {
+  const map = new Map();
+  state.items.forEach((item) => {
+    map.set(item.name, {
+      name: item.name,
+      hsn: item.hsn || "",
+      unit: item.unit || "job",
+      barcode: item.barcode || "",
+      qty: 0,
+      value: 0,
+      rate: numberValue(item.rate)
+    });
+  });
+
+  state.stockMovements.forEach((movement) => {
+    const key = movement.itemName || "Unknown item";
+    const row = map.get(key) || { name: key, hsn: "", unit: movement.unit || "job", barcode: movement.barcode || "", qty: 0, value: 0, rate: 0 };
+    const sign = movement.type === "sale" ? -1 : 1;
+    const qty = sign * numberValue(movement.qty);
+    row.qty += qty;
+    row.value += qty * numberValue(movement.cost);
+    row.barcode = row.barcode || movement.barcode || "";
+    row.unit = row.unit || movement.unit || "job";
+    map.set(key, row);
+  });
+
+  state.invoices.forEach((invoice) => {
+    if (invoice.billType === "estimate") return;
+    (invoice.items || []).forEach((line) => {
+      const key = line.description || "Unknown item";
+      const row = map.get(key) || { name: key, hsn: line.hsn || "", unit: line.unit || "job", barcode: "", qty: 0, value: 0, rate: numberValue(line.rate) };
+      row.qty -= numberValue(line.qty);
+      row.rate = numberValue(line.rate);
+      row.unit = line.unit || row.unit;
+      row.hsn = line.hsn || row.hsn;
+      map.set(key, row);
+    });
+  });
+
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function renderInventory() {
+  const target = $("#inventoryTable");
+  const search = $("#inventorySearch").value.trim().toLowerCase();
+  const rows = inventoryRows().filter((row) => {
+    const text = `${row.name} ${row.hsn} ${row.unit} ${row.barcode}`.toLowerCase();
+    return !search || text.includes(search);
+  });
+  if (!rows.length) {
+    target.innerHTML = emptyState("Inventory will appear after items or stock entries are saved.");
+    return;
+  }
+  target.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>HSN</th>
+          <th>Unit</th>
+          <th>Barcode</th>
+          <th class="amount-cell">Stock</th>
+          <th class="amount-cell">Rate</th>
+          <th>Alert</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((row) => `
+          <tr>
+            <td><strong>${escapeHtml(row.name)}</strong></td>
+            <td>${escapeHtml(row.hsn || "-")}</td>
+            <td>${escapeHtml(row.unit || "-")}</td>
+            <td>${escapeHtml(row.barcode || "-")}</td>
+            <td class="amount-cell">${numberValue(row.qty).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+            <td class="amount-cell">${money(row.rate)}</td>
+            <td>${row.qty < 0 ? '<span class="pill due">Negative</span>' : row.qty <= 5 ? '<span class="pill partial">Low</span>' : '<span class="pill paid">OK</span>'}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function saveStockMovement(event) {
+  event.preventDefault();
+  const itemName = $("#stockItemName").value.trim();
+  if (!itemName) {
+    showToast("Please enter stock item.");
+    return;
+  }
+  const master = findItemByName(itemName);
+  const movement = {
+    id: uid("stock"),
+    itemName,
+    type: $("#stockType").value,
+    qty: numberValue($("#stockQty").value),
+    cost: numberValue($("#stockCost").value),
+    vendor: $("#stockVendor").value.trim(),
+    barcode: $("#stockBarcode").value.trim(),
+    unit: master?.unit || "job",
+    date: todayISO(),
+    note: $("#stockNote").value.trim(),
+    createdAt: new Date().toISOString()
+  };
+  if (movement.qty <= 0) {
+    showToast("Quantity must be greater than zero.");
+    return;
+  }
+  state.stockMovements.unshift(movement);
+  if (!master) {
+    state.items.unshift({
+      id: uid("item"),
+      name: itemName,
+      hsn: "",
+      unit: "job",
+      rate: movement.cost,
+      tax: state.business.defaultTax || 18,
+      barcode: movement.barcode,
+      createdAt: new Date().toISOString()
+    });
+  } else if (movement.barcode) {
+    state.items = state.items.map((item) => item.id === master.id ? { ...item, barcode: movement.barcode } : item);
+  }
+  if (movement.vendor) {
+    const vendor = findPartyByName(movement.vendor);
+    if (!vendor) {
+      state.parties.unshift({ id: uid("party"), type: "supplier", name: movement.vendor, phone: "", gstin: "", address: "", opening: 0, createdAt: new Date().toISOString() });
+    }
+  }
+  saveState();
+  $("#stockForm").reset();
+  $("#stockQty").value = 1;
+  $("#stockCost").value = 0;
+  renderAll();
+  showToast("Stock entry saved.");
+}
+
+function addPosItem() {
+  const value = $("#posBarcode").value.trim();
+  if (!value) {
+    showToast("Scan or type an item first.");
+    return;
+  }
+  const item = state.items.find((master) => [master.name, master.barcode].filter(Boolean).map((text) => text.toLowerCase()).includes(value.toLowerCase()));
+  const line = item
+    ? createBlankItem({ description: item.name, hsn: item.hsn || "", unit: item.unit || "job", qty: 1, rate: numberValue(item.rate), tax: numberValue(item.tax) })
+    : createBlankItem({ description: value, qty: 1, rate: 0 });
+  const existing = posCart.find((cartLine) => cartLine.description.toLowerCase() === line.description.toLowerCase());
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    posCart.push(line);
+  }
+  $("#posBarcode").value = "";
+  renderPos();
+}
+
+function renderPos() {
+  const cart = $("#posCart");
+  if (!posCart.length) {
+    cart.innerHTML = emptyState("Scan an item to start POS billing.");
+  } else {
+    cart.innerHTML = posCart.map((line, index) => `
+      <div class="list-card pos-line">
+        <div class="list-card-header">
+          <div>
+            <strong>${escapeHtml(line.description)}</strong>
+            <small>${escapeHtml(line.hsn || "No HSN")} - ${escapeHtml(line.unit || "job")}</small>
+          </div>
+          <span class="pill paid">${money(line.qty * line.rate)}</span>
+        </div>
+        <div class="pos-line-controls">
+          <button class="icon-button" type="button" data-pos-dec="${index}" aria-label="Decrease quantity">-</button>
+          <input type="number" min="0" step="0.01" value="${line.qty}" data-pos-qty="${index}">
+          <input type="number" min="0" step="0.01" value="${line.rate}" data-pos-rate="${index}">
+          <button class="icon-button" type="button" data-pos-inc="${index}" aria-label="Increase quantity">+</button>
+          <button class="icon-button" type="button" data-pos-remove="${index}" aria-label="Remove item"><span data-icon="trash"></span></button>
+        </div>
+      </div>
+    `).join("");
+  }
+  const calc = calculateInvoice({ billType: "gst", items: posCart, discount: 0, paid: posCart.reduce((sum, item) => sum + item.qty * item.rate * (1 + item.tax / 100), 0) });
+  $("#posSummary").innerHTML = `
+    <div class="summary-row"><span>Items</span><strong>${posCart.length}</strong></div>
+    <div class="summary-row"><span>Taxable</span><strong>${money(calc.taxable)}</strong></div>
+    <div class="summary-row"><span>GST</span><strong>${money(calc.tax)}</strong></div>
+    <div class="summary-row summary-total"><span>Total</span><strong>${money(calc.total)}</strong></div>
+  `;
+  renderIcons(cart);
+}
+
+function checkoutPos() {
+  if (!posCart.length) {
+    showToast("Cart is empty.");
+    return;
+  }
+  const draft = {
+    id: uid("invoice"),
+    number: invoiceNumberForNew(),
+    billType: "gst",
+    date: todayISO(),
+    customerName: $("#posCustomer").value.trim() || "Walk-in Customer",
+    customerPhone: "",
+    customerAddress: "",
+    customerGstin: "",
+    paymentMethod: $("#posMethod").value || "Cash",
+    items: clone(posCart),
+    discount: 0,
+    paid: calculateInvoice({ billType: "gst", items: posCart, discount: 0, paid: 0 }).total,
+    notes: "POS counter sale",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  state.invoices.unshift(draft);
+  state.invoiceCounter += 1;
+  lastInvoiceId = draft.id;
+  upsertPartyFromInvoice(draft);
+  upsertItemsFromInvoice(draft);
+  posCart = [];
+  saveState();
+  renderAll();
+  showToast(`POS bill ${draft.number} saved.`);
+}
+
+function lastInvoice() {
+  return state.invoices.find((invoice) => invoice.id === lastInvoiceId) || state.invoices[0];
+}
+
+function shareInvoiceLink(type) {
+  const invoice = lastInvoice();
+  shareInvoice(invoice, type);
+}
+
+function shareInvoice(invoice, type) {
+  if (!invoice) {
+    showToast("No invoice available to share.");
+    return;
+  }
+  const calc = calculateInvoice(invoice);
+  const text = `${state.business.name}: ${invoice.number} for ${invoice.customerName}, amount ${money(calc.total)}, pending ${money(calc.due)}.`;
+  if (type === "whatsapp") {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  } else {
+    window.location.href = `mailto:?subject=${encodeURIComponent(`${invoice.number} from ${state.business.name}`)}&body=${encodeURIComponent(text)}`;
+  }
+}
+
+function resetLeadForm() {
+  $("#leadForm").reset();
+  $("#leadId").value = "";
+  $("#leadValue").value = 0;
+}
+
+function resetEmployeeForm() {
+  $("#employeeForm").reset();
+  $("#employeeId").value = "";
+}
+
+function saveLead(event) {
+  event.preventDefault();
+  const existingId = $("#leadId").value;
+  const lead = {
+    id: existingId || uid("lead"),
+    name: $("#leadName").value.trim(),
+    status: $("#leadStatus").value,
+    phone: $("#leadPhone").value.trim(),
+    value: numberValue($("#leadValue").value),
+    followUp: $("#leadFollowUp").value,
+    owner: $("#leadOwner").value.trim(),
+    note: $("#leadNote").value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  if (!lead.name) {
+    showToast("Please enter lead name.");
+    return;
+  }
+  if (existingId) {
+    state.leads = state.leads.map((item) => item.id === existingId ? lead : item);
+  } else {
+    lead.createdAt = new Date().toISOString();
+    state.leads.unshift(lead);
+  }
+  saveState();
+  resetLeadForm();
+  renderAll();
+  showToast("Lead saved.");
+}
+
+function saveEmployee(event) {
+  event.preventDefault();
+  const existingId = $("#employeeId").value;
+  const employee = {
+    id: existingId || uid("employee"),
+    name: $("#employeeName").value.trim(),
+    role: $("#employeeRole").value,
+    pin: $("#employeePin").value,
+    active: true,
+    updatedAt: new Date().toISOString()
+  };
+  if (!employee.name) {
+    showToast("Please enter employee name.");
+    return;
+  }
+  if (existingId) {
+    state.employees = state.employees.map((item) => item.id === existingId ? employee : item);
+  } else {
+    employee.createdAt = new Date().toISOString();
+    state.employees.unshift(employee);
+  }
+  state.activeEmployeeId = $("#activeEmployee").value || employee.id;
+  saveState();
+  resetEmployeeForm();
+  renderAll();
+  showToast("Employee role saved.");
+}
+
+function renderCRM() {
+  const activeOptions = state.employees.map((employee) => `<option value="${escapeHtml(employee.id)}">${escapeHtml(employee.name)} - ${escapeHtml(employee.role)}</option>`).join("");
+  $("#activeEmployee").innerHTML = activeOptions;
+  $("#activeEmployee").value = state.activeEmployeeId || state.employees[0]?.id || "owner";
+
+  const leads = state.leads;
+  const employees = state.employees;
+  $("#crmTables").innerHTML = `
+    <div class="master-list">
+      <h3>Leads</h3>
+      ${leads.length ? `<div class="table-shell"><table class="data-table master-table">
+        <thead><tr><th>Name</th><th>Status</th><th>Follow-up</th><th class="amount-cell">Value</th></tr></thead>
+        <tbody>${leads.map((lead) => `<tr><td><strong>${escapeHtml(lead.name)}</strong><br><small>${escapeHtml(lead.phone || lead.note || "-")}</small></td><td><span class="pill partial">${escapeHtml(lead.status)}</span></td><td>${formatDate(lead.followUp) || "-"}</td><td class="amount-cell">${money(lead.value)}</td></tr>`).join("")}</tbody>
+      </table></div>` : emptyState("No CRM leads yet.")}
+    </div>
+    <div class="master-list">
+      <h3>Employees</h3>
+      ${employees.length ? `<div class="table-shell"><table class="data-table master-table">
+        <thead><tr><th>Name</th><th>Role</th><th>Access</th></tr></thead>
+        <tbody>${employees.map((employee) => `<tr><td><strong>${escapeHtml(employee.name)}</strong></td><td>${escapeHtml(employee.role)}</td><td>${employee.id === state.activeEmployeeId ? '<span class="pill paid">Active</span>' : '<span class="pill partial">Ready</span>'}</td></tr>`).join("")}</tbody>
+      </table></div>` : emptyState("No employee roles yet.")}
+    </div>
+  `;
+}
+
+function generatedNotifications() {
+  const stockAlerts = inventoryRows()
+    .filter((row) => row.qty <= 5)
+    .slice(0, 4)
+    .map((row) => ({ title: `${row.name} stock is ${row.qty < 0 ? "negative" : "low"}`, body: "Review purchase or stock adjustment.", type: row.qty < 0 ? "danger" : "warning" }));
+  const followUps = state.leads
+    .filter((lead) => lead.followUp && lead.followUp <= todayISO() && !["won", "lost"].includes(lead.status))
+    .slice(0, 4)
+    .map((lead) => ({ title: `Follow up ${lead.name}`, body: lead.note || "CRM follow-up is due.", type: "info" }));
+  const pending = ledgerRows()
+    .filter((row) => row.due > 0)
+    .slice(0, 4)
+    .map((row) => ({ title: `${row.name} payment pending`, body: `${money(row.due)} due.`, type: "warning" }));
+  return [...stockAlerts, ...followUps, ...pending, ...state.notifications].slice(0, 10);
+}
+
+function renderNotifications() {
+  const list = $("#notificationList");
+  const items = generatedNotifications();
+  if (!items.length) {
+    list.innerHTML = emptyState("No notifications. Everything looks calm.");
+    return;
+  }
+  list.innerHTML = items.map((item) => `
+    <div class="list-card notification ${escapeHtml(item.type || "info")}">
+      <div class="list-card-header">
+        <div>
+          <strong>${escapeHtml(item.title)}</strong>
+          <small>${escapeHtml(item.body || "")}</small>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function aiInsightRows() {
+  const month = statsForMonth(currentMonthISO());
+  const prevDate = new Date();
+  prevDate.setMonth(prevDate.getMonth() - 1);
+  const previous = statsForMonth(prevDate.toISOString().slice(0, 7));
+  const growth = previous.moneyIn ? ((month.moneyIn - previous.moneyIn) / previous.moneyIn) * 100 : 0;
+  const topDue = ledgerRows().filter((row) => row.due > 0).sort((a, b) => b.due - a.due)[0];
+  const expenses = month.entries.filter((entry) => entry.type === "expense").reduce((sum, entry) => sum + entry.amount, 0);
+  return [
+    { title: "Cash forecast", body: `At this pace, month-end cash movement may close near ${money(month.profit * 1.4)}.` },
+    { title: "Sales trend", body: previous.moneyIn ? `Money-in is ${growth >= 0 ? "up" : "down"} ${Math.abs(growth).toFixed(1)}% versus last month.` : "Add last month data to unlock trend comparison." },
+    { title: "Collection priority", body: topDue ? `Call ${topDue.name} first; pending amount is ${money(topDue.due)}.` : "No customer collection pressure right now." },
+    { title: "Expense watch", body: expenses > month.moneyIn * 0.65 && month.moneyIn > 0 ? "Expenses are heavy this month; review vendor purchases." : "Expense ratio is within a normal operating band." }
+  ];
+}
+
+function renderAI() {
+  $("#aiInsights").innerHTML = aiInsightRows().map((row) => `
+    <div class="insight-card">
+      <strong>${escapeHtml(row.title)}</strong>
+      <span>${escapeHtml(row.body)}</span>
+    </div>
+  `).join("");
+  renderNotifications();
+}
+
+function handleOcrUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const result = $("#ocrResult");
+  result.textContent = `Loaded ${file.name}. Browser-only OCR is prepared as a workflow placeholder; for real text extraction connect Google Vision, Azure OCR, or Tesseract.js. I can still save this as a purchase note after cloud OCR is added.`;
+}
+
+function startVoiceBilling(target = "ai") {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const output = target === "pos" ? $("#posBarcode") : $("#voiceResult");
+  if (!SpeechRecognition) {
+    if (target === "pos") showToast("Voice recognition is not supported in this browser.");
+    else output.textContent = "Voice recognition is not supported in this browser.";
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    if (target === "pos") {
+      $("#posBarcode").value = text;
+      showToast(`Voice captured: ${text}`);
+    } else {
+      output.textContent = `Voice captured: ${text}`;
+      const match = text.match(/(?:bill|add)\s+(.+?)\s+(\d+(?:\.\d+)?)\s+(?:at|for)\s+(\d+(?:\.\d+)?)/i);
+      if (match) {
+        invoiceItems.push(createBlankItem({ description: match[1].trim(), qty: numberValue(match[2]), rate: numberValue(match[3]) }));
+        renderItemEditor();
+        setView("billing");
+      }
+    }
+  };
+  recognition.start();
+}
+
+function copyInsights() {
+  const text = aiInsightRows().map((row) => `${row.title}: ${row.body}`).join("\n");
+  navigator.clipboard?.writeText(text);
+  showToast("Insights copied.");
+}
+
 function renderReports() {
   const month = $("#reportMonth").value || currentMonthISO();
   const stats = statsForMonth(month);
@@ -1411,7 +1892,12 @@ function importBackup(event) {
         business: { ...clone(DEFAULT_STATE.business), ...imported.business },
         cloud: { ...clone(DEFAULT_STATE.cloud), ...(imported.cloud || {}) },
         parties: Array.isArray(imported.parties) ? imported.parties : [],
-        items: Array.isArray(imported.items) ? imported.items : seedItems()
+        items: Array.isArray(imported.items) ? imported.items : seedItems(),
+        stockMovements: Array.isArray(imported.stockMovements) ? imported.stockMovements : [],
+        leads: Array.isArray(imported.leads) ? imported.leads : [],
+        employees: Array.isArray(imported.employees) && imported.employees.length ? imported.employees : clone(DEFAULT_STATE.employees),
+        activeEmployeeId: imported.activeEmployeeId || "owner",
+        notifications: Array.isArray(imported.notifications) ? imported.notifications : []
       };
       saveState();
       resetInvoiceForm();
@@ -1456,7 +1942,7 @@ function printLedger() {
   $("#printArea").innerHTML = `
     <div class="print-document">
       <header class="print-header">
-        <img class="print-logo" src="${escapeHtml(state.business.logo || "assets/resham-mark.svg")}" alt="">
+        <img class="print-logo" src="${escapeHtml(state.business.logo || "assets/resham-logo.jpg")}" alt="">
         <div>
           <h1>${escapeHtml(state.business.name || "Resham Printers")}</h1>
           <p>${nl2br(state.business.address || "")}</p>
@@ -1501,7 +1987,7 @@ function printReport() {
   $("#printArea").innerHTML = `
     <div class="print-document">
       <header class="print-header">
-        <img class="print-logo" src="${escapeHtml(state.business.logo || "assets/resham-mark.svg")}" alt="">
+        <img class="print-logo" src="${escapeHtml(state.business.logo || "assets/resham-logo.jpg")}" alt="">
         <div>
           <h1>${escapeHtml(state.business.name || "Resham Printers")}</h1>
           <p>${nl2br(state.business.address || "")}</p>
@@ -1536,9 +2022,13 @@ function renderAll() {
   renderDashboard();
   renderInvoiceList();
   renderMasters();
+  renderInventory();
+  renderPos();
+  renderCRM();
   renderTransactions();
   renderLedger();
   renderReports();
+  renderAI();
   if (currentView === "settings") renderSettingsForm();
   renderIcons(document);
 }
@@ -1636,11 +2126,21 @@ function bindEvents() {
   $("#invoiceList").addEventListener("click", (event) => {
     const edit = event.target.closest("[data-invoice-edit]");
     const print = event.target.closest("[data-invoice-print]");
+    const whatsapp = event.target.closest("[data-invoice-whatsapp]");
+    const email = event.target.closest("[data-invoice-email]");
     const remove = event.target.closest("[data-invoice-delete]");
     if (edit) loadInvoiceIntoForm(edit.dataset.invoiceEdit);
     if (print) {
       const invoice = state.invoices.find((item) => item.id === print.dataset.invoicePrint);
       if (invoice) printInvoice(invoice);
+    }
+    if (whatsapp) {
+      const invoice = state.invoices.find((item) => item.id === whatsapp.dataset.invoiceWhatsapp);
+      shareInvoice(invoice, "whatsapp");
+    }
+    if (email) {
+      const invoice = state.invoices.find((item) => item.id === email.dataset.invoiceEmail);
+      shareInvoice(invoice, "email");
     }
     if (remove) deleteInvoice(remove.dataset.invoiceDelete);
   });
@@ -1668,6 +2168,57 @@ function bindEvents() {
     if (itemEdit) loadItemIntoForm(itemEdit.dataset.itemEdit);
     if (itemDelete) deleteItemMaster(itemDelete.dataset.itemDelete);
   });
+  $("#stockForm").addEventListener("submit", saveStockMovement);
+  $("#inventorySearch").addEventListener("input", renderInventory);
+  $("#addPosItemBtn").addEventListener("click", addPosItem);
+  $("#posBarcode").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addPosItem();
+    }
+  });
+  $("#voicePosBtn").addEventListener("click", () => startVoiceBilling("pos"));
+  $("#clearPosBtn").addEventListener("click", () => {
+    posCart = [];
+    renderPos();
+  });
+  $("#posCart").addEventListener("click", (event) => {
+    const inc = event.target.closest("[data-pos-inc]");
+    const dec = event.target.closest("[data-pos-dec]");
+    const remove = event.target.closest("[data-pos-remove]");
+    if (inc) posCart[Number(inc.dataset.posInc)].qty += 1;
+    if (dec) posCart[Number(dec.dataset.posDec)].qty = Math.max(0, posCart[Number(dec.dataset.posDec)].qty - 1);
+    if (remove) posCart.splice(Number(remove.dataset.posRemove), 1);
+    posCart = posCart.filter((line) => line.qty > 0);
+    renderPos();
+  });
+  $("#posCart").addEventListener("input", (event) => {
+    const qty = event.target.closest("[data-pos-qty]");
+    const rate = event.target.closest("[data-pos-rate]");
+    if (qty) posCart[Number(qty.dataset.posQty)].qty = numberValue(qty.value);
+    if (rate) posCart[Number(rate.dataset.posRate)].rate = numberValue(rate.value);
+    renderPos();
+  });
+  $("#checkoutPosBtn").addEventListener("click", checkoutPos);
+  $("#printLastInvoiceBtn").addEventListener("click", () => {
+    const invoice = lastInvoice();
+    if (invoice) printInvoice(invoice);
+    else showToast("No invoice available.");
+  });
+  $("#whatsappLastInvoiceBtn").addEventListener("click", () => shareInvoiceLink("whatsapp"));
+  $("#emailLastInvoiceBtn").addEventListener("click", () => shareInvoiceLink("email"));
+  $("#leadForm").addEventListener("submit", saveLead);
+  $("#clearLeadBtn").addEventListener("click", resetLeadForm);
+  $("#employeeForm").addEventListener("submit", saveEmployee);
+  $("#clearEmployeeBtn").addEventListener("click", resetEmployeeForm);
+  $("#activeEmployee").addEventListener("change", () => {
+    state.activeEmployeeId = $("#activeEmployee").value;
+    saveState();
+    renderAll();
+  });
+  $("#ocrUpload").addEventListener("change", handleOcrUpload);
+  $("#startVoiceBtn").addEventListener("click", () => startVoiceBilling("ai"));
+  $("#copyInsightBtn").addEventListener("click", copyInsights);
   $("#reportMonth").addEventListener("change", renderReports);
   $("#exportCsvBtn").addEventListener("click", exportCsv);
   $("#printReportBtn").addEventListener("click", printReport);

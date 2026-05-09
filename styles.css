@@ -1,16 +1,20 @@
 :root {
-  --ink: #17212f;
-  --muted: #687385;
+  --ink: #171a1f;
+  --muted: #66717d;
   --line: #dce3ec;
   --paper: #ffffff;
-  --canvas: #f4f7f3;
+  --canvas: #f5f7f8;
   --soft: #eef2f6;
-  --blue: #2f80ed;
-  --blue-dark: #1557aa;
-  --amber: #f5b84b;
+  --blue: #00a9d6;
+  --blue-dark: #057ca0;
+  --amber: #f15a24;
+  --orange: #f15a24;
+  --cyan: #00a9d6;
+  --silver: #e6edf1;
+  --charcoal: #171a1f;
   --green: #2e9d69;
   --red: #c94c4c;
-  --violet: #7b61ff;
+  --violet: #6c5ce7;
   --shadow: 0 22px 70px rgba(23, 33, 47, 0.12);
   --radius: 8px;
   color-scheme: light;
@@ -31,8 +35,8 @@ body {
   margin: 0;
   color: var(--ink);
   background:
-    linear-gradient(135deg, rgba(245, 184, 75, 0.12), transparent 34%),
-    linear-gradient(315deg, rgba(47, 128, 237, 0.1), transparent 38%),
+    linear-gradient(135deg, rgba(241, 90, 36, 0.12), transparent 34%),
+    linear-gradient(315deg, rgba(0, 169, 214, 0.12), transparent 38%),
     var(--canvas);
 }
 
@@ -66,7 +70,10 @@ button:disabled {
   gap: 22px;
   height: 100vh;
   padding: 24px 18px;
-  background: linear-gradient(180deg, #17212f 0%, #223044 100%);
+  background:
+    linear-gradient(135deg, rgba(241, 90, 36, 0.22), transparent 42%),
+    linear-gradient(315deg, rgba(0, 169, 214, 0.2), transparent 38%),
+    linear-gradient(180deg, #171a1f 0%, #262c33 100%);
   border-right: 1px solid rgba(23, 33, 47, 0.18);
   backdrop-filter: blur(18px);
 }
@@ -84,7 +91,8 @@ button:disabled {
   height: 52px;
   border-radius: 8px;
   object-fit: cover;
-  box-shadow: 0 12px 30px rgba(23, 33, 47, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  box-shadow: 0 12px 30px rgba(0, 169, 214, 0.18);
 }
 
 .brand-block strong {
@@ -134,8 +142,8 @@ button:disabled {
 .nav-tab.active,
 .nav-tab:hover {
   color: #17212f;
-  background: linear-gradient(90deg, #ffffff 0%, #fff5d8 100%);
-  border-color: rgba(245, 184, 75, 0.72);
+  background: linear-gradient(90deg, #ffffff 0%, #e9fbff 52%, #fff0e8 100%);
+  border-color: rgba(0, 169, 214, 0.72);
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
 }
 
@@ -235,12 +243,12 @@ button:disabled {
 
 .primary-button {
   color: #ffffff;
-  background: var(--ink);
-  box-shadow: 0 16px 35px rgba(23, 33, 47, 0.22);
+  background: linear-gradient(135deg, var(--charcoal), #29323b);
+  box-shadow: 0 16px 35px rgba(0, 169, 214, 0.18);
 }
 
 .primary-button:hover {
-  background: #223044;
+  background: linear-gradient(135deg, #232a31, #101317);
 }
 
 .ghost-button,
@@ -649,6 +657,13 @@ textarea:focus {
   grid-template-columns: minmax(320px, 0.78fr) minmax(320px, 0.78fr);
 }
 
+.inventory-layout,
+.pos-layout,
+.crm-layout,
+.ai-layout {
+  grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1fr);
+}
+
 .masters-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -676,6 +691,66 @@ textarea:focus {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.pos-summary {
+  margin-top: 14px;
+}
+
+.pos-actions {
+  margin-top: 12px;
+}
+
+.pos-line-controls {
+  display: grid;
+  grid-template-columns: 42px minmax(72px, 1fr) minmax(92px, 1fr) 42px 42px;
+  gap: 8px;
+  align-items: center;
+}
+
+.pos-line-controls input {
+  min-height: 38px;
+}
+
+.ai-tools,
+.insight-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ai-result,
+.insight-card {
+  padding: 13px;
+  background: #f9fbfd;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: #3b4658;
+  line-height: 1.5;
+}
+
+.insight-card {
+  display: grid;
+  gap: 5px;
+}
+
+.insight-card strong {
+  color: var(--ink);
+}
+
+.insight-card span {
+  color: var(--muted);
+}
+
+.notification.warning {
+  border-left: 4px solid var(--amber);
+}
+
+.notification.danger {
+  border-left: 4px solid var(--red);
+}
+
+.notification.info {
+  border-left: 4px solid var(--cyan);
 }
 
 .item-row label {
@@ -1046,7 +1121,13 @@ textarea:focus {
 
   .split-layout,
   .dashboard-grid,
-  .money-layout {
+  .money-layout,
+  .inventory-layout,
+  .pos-layout,
+  .crm-layout,
+  .ai-layout,
+  .masters-layout,
+  .masters-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1135,6 +1216,10 @@ textarea:focus {
   }
 
   .item-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pos-line-controls {
     grid-template-columns: 1fr 1fr;
   }
 
