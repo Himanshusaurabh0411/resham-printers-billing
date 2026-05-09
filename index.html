@@ -30,10 +30,6 @@
             <span data-icon="database"></span>
             <span>Masters</span>
           </button>
-          <button class="nav-tab" data-view="pos" type="button">
-            <span data-icon="scan"></span>
-            <span>POS</span>
-          </button>
           <button class="nav-tab" data-view="crm" type="button">
             <span data-icon="users"></span>
             <span>CRM</span>
@@ -131,6 +127,10 @@
         </section>
 
         <section id="billingView" class="view">
+          <div class="busy-title-strip">
+            <span>Sales Invoice Voucher</span>
+            <strong>Tax Invoice Entry</strong>
+          </div>
           <div class="split-layout">
             <article class="panel form-panel">
               <div class="panel-heading">
@@ -348,76 +348,6 @@
                 </label>
               </div>
               <div id="masterTables" class="masters-grid"></div>
-            </article>
-          </div>
-        </section>
-
-        <section id="posView" class="view">
-          <div class="split-layout pos-layout">
-            <article class="panel form-panel">
-              <div class="panel-heading">
-                <div>
-                  <span class="eyebrow">POS</span>
-                  <h2>Barcode billing counter</h2>
-                </div>
-                <button class="ghost-button small-button" id="clearPosBtn" type="button">
-                  <span data-icon="rotate"></span>
-                  Clear
-                </button>
-              </div>
-              <form id="posForm" class="form-grid">
-                <label class="full-span">
-                  <span>Scan barcode / search item</span>
-                  <input id="posBarcode" type="text" list="itemOptions" placeholder="Scan barcode or type item name">
-                </label>
-                <label>
-                  <span>Customer</span>
-                  <input id="posCustomer" type="text" list="partyOptions" placeholder="Walk-in customer">
-                </label>
-                <label>
-                  <span>Paid by</span>
-                  <select id="posMethod"></select>
-                </label>
-                <div class="full-span action-row">
-                  <button class="primary-button" id="addPosItemBtn" type="button">
-                    <span data-icon="plus"></span>
-                    Add to cart
-                  </button>
-                  <button class="ghost-button" id="voicePosBtn" type="button">
-                    <span data-icon="mic"></span>
-                    Voice
-                  </button>
-                </div>
-              </form>
-            </article>
-
-            <article class="panel">
-              <div class="panel-heading">
-                <div>
-                  <span class="eyebrow">Counter cart</span>
-                  <h2>Fast checkout</h2>
-                </div>
-              </div>
-              <div id="posCart" class="stack-list"></div>
-              <div class="invoice-summary pos-summary" id="posSummary"></div>
-              <div class="action-row pos-actions">
-                <button class="primary-button" id="checkoutPosBtn" type="button">
-                  <span data-icon="receipt"></span>
-                  Checkout bill
-                </button>
-                <button class="ghost-button" id="printLastInvoiceBtn" type="button">
-                  <span data-icon="printer"></span>
-                  Print/PDF
-                </button>
-                <button class="ghost-button" id="whatsappLastInvoiceBtn" type="button">
-                  <span data-icon="send"></span>
-                  WhatsApp
-                </button>
-                <button class="ghost-button" id="emailLastInvoiceBtn" type="button">
-                  <span data-icon="mail"></span>
-                  Email
-                </button>
-              </div>
             </article>
           </div>
         </section>

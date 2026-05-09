@@ -17,7 +17,7 @@ BUSY / Zoho Books / Tally-style business suite while staying free to host.
 
 - Billing: GST invoice, simple bill, estimate, print/PDF through browser print, WhatsApp and email share links
 - Masters: customer/supplier party master and item/service master with HSN/SAC, unit, GST, rate, barcode/SKU
-- POS: scan/search cart, fast checkout, POS invoice creation
+- GST voucher entry: GSTIN state detection, intra/inter-state tax display, saved invoice print layouts
 - Accounting: money-in/money-out register, ledger, pending payments, monthly reports, CSV export
 - CRM: leads, follow-ups, expected value, assigned owner
 - Roles: employee role records and active-user selection for UI-level access planning

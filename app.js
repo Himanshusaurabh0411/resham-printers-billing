@@ -51,7 +51,6 @@ const ICONS = {
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.22.4.56.74 1 .95.32.15.68.23 1.04.23H21a2 2 0 0 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>',
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>',
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>',
-  scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path d="M7 8v8M10 8v8M14 8v8M17 8v8"/></svg>',
   users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.9 5.8L20 10l-6.1 2.2L12 18l-1.9-5.8L4 10l6.1-2.2L12 2z"/><path d="M19 16l.9 2.6 2.1.9-2.1.9L19 23l-.9-2.6-2.1-.9 2.1-.9L19 16z"/></svg>',
   mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>',
@@ -75,8 +74,6 @@ let state = loadState();
 let currentView = "dashboard";
 let editingInvoiceId = null;
 let invoiceItems = [createBlankItem()];
-let posCart = [];
-let lastInvoiceId = null;
 let toastTimer = null;
 
 function clone(value) {
@@ -386,7 +383,6 @@ function setView(view) {
     dashboard: "Dashboard",
     billing: "Billing",
     masters: "Masters",
-    pos: "POS",
     crm: "CRM",
     money: "Money",
     ledger: "Ledger",
@@ -414,16 +410,12 @@ function renderPaymentOptions() {
   const options = state.paymentMethods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
   const invoiceMethod = $("#invoicePaymentMethod");
   const transactionMethod = $("#transactionMethod");
-  const posMethod = $("#posMethod");
   const currentInvoice = invoiceMethod.value;
   const currentTransaction = transactionMethod.value;
-  const currentPos = posMethod?.value;
   invoiceMethod.innerHTML = options;
   transactionMethod.innerHTML = options;
-  if (posMethod) posMethod.innerHTML = options;
   invoiceMethod.value = state.paymentMethods.includes(currentInvoice) ? currentInvoice : state.paymentMethods[0];
   transactionMethod.value = state.paymentMethods.includes(currentTransaction) ? currentTransaction : state.paymentMethods[0];
-  if (posMethod) posMethod.value = state.paymentMethods.includes(currentPos) ? currentPos : state.paymentMethods[0];
 }
 
 function renderMasterOptions() {
@@ -798,8 +790,19 @@ function deleteInvoice(id) {
 }
 
 function printInvoice(invoice) {
-  $("#printArea").innerHTML = renderInvoicePrint(invoice);
-  window.print();
+  printMarkup(renderInvoicePrint(invoice));
+}
+
+function printMarkup(markup) {
+  $("#printArea").innerHTML = markup;
+  document.body.classList.add("printing-invoice");
+  requestAnimationFrame(() => {
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-invoice");
+      $("#printArea").innerHTML = "";
+    }, 500);
+  });
 }
 
 function renderInvoicePrint(invoice) {
@@ -1339,102 +1342,6 @@ function deleteItemMaster(id) {
   showToast("Item deleted.");
 }
 
-function addPosItem() {
-  const value = $("#posBarcode").value.trim();
-  if (!value) {
-    showToast("Scan or type an item first.");
-    return;
-  }
-  const item = state.items.find((master) => [master.name, master.barcode].filter(Boolean).map((text) => text.toLowerCase()).includes(value.toLowerCase()));
-  const line = item
-    ? createBlankItem({ description: item.name, hsn: item.hsn || "", unit: item.unit || "job", qty: 1, rate: numberValue(item.rate), tax: numberValue(item.tax) })
-    : createBlankItem({ description: value, qty: 1, rate: 0 });
-  const existing = posCart.find((cartLine) => cartLine.description.toLowerCase() === line.description.toLowerCase());
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    posCart.push(line);
-  }
-  $("#posBarcode").value = "";
-  renderPos();
-}
-
-function renderPos() {
-  const cart = $("#posCart");
-  if (!posCart.length) {
-    cart.innerHTML = emptyState("Scan an item to start POS billing.");
-  } else {
-    cart.innerHTML = posCart.map((line, index) => `
-      <div class="list-card pos-line">
-        <div class="list-card-header">
-          <div>
-            <strong>${escapeHtml(line.description)}</strong>
-            <small>${escapeHtml(line.hsn || "No HSN")} - ${escapeHtml(line.unit || "job")}</small>
-          </div>
-          <span class="pill paid">${money(line.qty * line.rate)}</span>
-        </div>
-        <div class="pos-line-controls">
-          <button class="icon-button" type="button" data-pos-dec="${index}" aria-label="Decrease quantity">-</button>
-          <input type="number" min="0" step="0.01" value="${line.qty}" data-pos-qty="${index}">
-          <input type="number" min="0" step="0.01" value="${line.rate}" data-pos-rate="${index}">
-          <button class="icon-button" type="button" data-pos-inc="${index}" aria-label="Increase quantity">+</button>
-          <button class="icon-button" type="button" data-pos-remove="${index}" aria-label="Remove item"><span data-icon="trash"></span></button>
-        </div>
-      </div>
-    `).join("");
-  }
-  const calc = calculateInvoice({ billType: "gst", items: posCart, discount: 0, paid: posCart.reduce((sum, item) => sum + item.qty * item.rate * (1 + item.tax / 100), 0) });
-  $("#posSummary").innerHTML = `
-    <div class="summary-row"><span>Items</span><strong>${posCart.length}</strong></div>
-    <div class="summary-row"><span>Taxable</span><strong>${money(calc.taxable)}</strong></div>
-    <div class="summary-row"><span>GST</span><strong>${money(calc.tax)}</strong></div>
-    <div class="summary-row summary-total"><span>Total</span><strong>${money(calc.total)}</strong></div>
-  `;
-  renderIcons(cart);
-}
-
-function checkoutPos() {
-  if (!posCart.length) {
-    showToast("Cart is empty.");
-    return;
-  }
-  const draft = {
-    id: uid("invoice"),
-    number: invoiceNumberForNew(),
-    billType: "gst",
-    date: todayISO(),
-    customerName: $("#posCustomer").value.trim() || "Walk-in Customer",
-    customerPhone: "",
-    customerAddress: "",
-    customerGstin: "",
-    paymentMethod: $("#posMethod").value || "Cash",
-    items: clone(posCart),
-    discount: 0,
-    paid: calculateInvoice({ billType: "gst", items: posCart, discount: 0, paid: 0 }).total,
-    notes: "POS counter sale",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  state.invoices.unshift(draft);
-  state.invoiceCounter += 1;
-  lastInvoiceId = draft.id;
-  upsertPartyFromInvoice(draft);
-  upsertItemsFromInvoice(draft);
-  posCart = [];
-  saveState();
-  renderAll();
-  showToast(`POS bill ${draft.number} saved.`);
-}
-
-function lastInvoice() {
-  return state.invoices.find((invoice) => invoice.id === lastInvoiceId) || state.invoices[0];
-}
-
-function shareInvoiceLink(type) {
-  const invoice = lastInvoice();
-  shareInvoice(invoice, type);
-}
-
 function shareInvoice(invoice, type) {
   if (!invoice) {
     showToast("No invoice available to share.");
@@ -1609,27 +1516,21 @@ function handleOcrUpload(event) {
 
 function startVoiceBilling(target = "ai") {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const output = target === "pos" ? $("#posBarcode") : $("#voiceResult");
+  const output = $("#voiceResult");
   if (!SpeechRecognition) {
-    if (target === "pos") showToast("Voice recognition is not supported in this browser.");
-    else output.textContent = "Voice recognition is not supported in this browser.";
+    output.textContent = "Voice recognition is not supported in this browser.";
     return;
   }
   const recognition = new SpeechRecognition();
   recognition.lang = "en-IN";
   recognition.onresult = (event) => {
     const text = event.results[0][0].transcript;
-    if (target === "pos") {
-      $("#posBarcode").value = text;
-      showToast(`Voice captured: ${text}`);
-    } else {
-      output.textContent = `Voice captured: ${text}`;
-      const match = text.match(/(?:bill|add)\s+(.+?)\s+(\d+(?:\.\d+)?)\s+(?:at|for)\s+(\d+(?:\.\d+)?)/i);
-      if (match) {
-        invoiceItems.push(createBlankItem({ description: match[1].trim(), qty: numberValue(match[2]), rate: numberValue(match[3]) }));
-        renderItemEditor();
-        setView("billing");
-      }
+    output.textContent = `Voice captured: ${text}`;
+    const match = text.match(/(?:bill|add)\s+(.+?)\s+(\d+(?:\.\d+)?)\s+(?:at|for)\s+(\d+(?:\.\d+)?)/i);
+    if (match) {
+      invoiceItems.push(createBlankItem({ description: match[1].trim(), qty: numberValue(match[2]), rate: numberValue(match[3]) }));
+      renderItemEditor();
+      setView("billing");
     }
   };
   recognition.start();
@@ -1858,7 +1759,7 @@ function exportCsv() {
 
 function printLedger() {
   const rows = ledgerRows();
-  $("#printArea").innerHTML = `
+  printMarkup(`
     <div class="print-document">
       <header class="print-header">
         <div>
@@ -1895,14 +1796,13 @@ function printLedger() {
         </tbody>
       </table>
     </div>
-  `;
-  window.print();
+  `);
 }
 
 function printReport() {
   const month = $("#reportMonth").value || currentMonthISO();
   const stats = statsForMonth(month);
-  $("#printArea").innerHTML = `
+  printMarkup(`
     <div class="print-document">
       <header class="print-header">
         <div>
@@ -1928,8 +1828,7 @@ function printReport() {
         </div>
       </section>
     </div>
-  `;
-  window.print();
+  `);
 }
 
 function renderAll() {
@@ -1939,7 +1838,6 @@ function renderAll() {
   renderDashboard();
   renderInvoiceList();
   renderMasters();
-  renderPos();
   renderCRM();
   renderTransactions();
   renderLedger();
@@ -2116,43 +2014,6 @@ function bindEvents() {
     if (itemEdit) loadItemIntoForm(itemEdit.dataset.itemEdit);
     if (itemDelete) deleteItemMaster(itemDelete.dataset.itemDelete);
   });
-  $("#addPosItemBtn").addEventListener("click", addPosItem);
-  $("#posBarcode").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addPosItem();
-    }
-  });
-  $("#voicePosBtn").addEventListener("click", () => startVoiceBilling("pos"));
-  $("#clearPosBtn").addEventListener("click", () => {
-    posCart = [];
-    renderPos();
-  });
-  $("#posCart").addEventListener("click", (event) => {
-    const inc = event.target.closest("[data-pos-inc]");
-    const dec = event.target.closest("[data-pos-dec]");
-    const remove = event.target.closest("[data-pos-remove]");
-    if (inc) posCart[Number(inc.dataset.posInc)].qty += 1;
-    if (dec) posCart[Number(dec.dataset.posDec)].qty = Math.max(0, posCart[Number(dec.dataset.posDec)].qty - 1);
-    if (remove) posCart.splice(Number(remove.dataset.posRemove), 1);
-    posCart = posCart.filter((line) => line.qty > 0);
-    renderPos();
-  });
-  $("#posCart").addEventListener("input", (event) => {
-    const qty = event.target.closest("[data-pos-qty]");
-    const rate = event.target.closest("[data-pos-rate]");
-    if (qty) posCart[Number(qty.dataset.posQty)].qty = numberValue(qty.value);
-    if (rate) posCart[Number(rate.dataset.posRate)].rate = numberValue(rate.value);
-    renderPos();
-  });
-  $("#checkoutPosBtn").addEventListener("click", checkoutPos);
-  $("#printLastInvoiceBtn").addEventListener("click", () => {
-    const invoice = lastInvoice();
-    if (invoice) printInvoice(invoice);
-    else showToast("No invoice available.");
-  });
-  $("#whatsappLastInvoiceBtn").addEventListener("click", () => shareInvoiceLink("whatsapp"));
-  $("#emailLastInvoiceBtn").addEventListener("click", () => shareInvoiceLink("email"));
   $("#leadForm").addEventListener("submit", saveLead);
   $("#clearLeadBtn").addEventListener("click", resetLeadForm);
   $("#employeeForm").addEventListener("submit", saveEmployee);

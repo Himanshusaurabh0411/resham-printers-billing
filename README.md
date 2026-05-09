@@ -7,7 +7,7 @@ A first working billing and ledger website for Resham Printers.
 - Create GST invoices, simple bills, and estimates.
 - Busy-style party/customer masters and item/service masters.
 - Add printing services/items with HSN/SAC, unit, GST %, discounts, received amount, and pending amount.
-- POS counter billing with scan/search cart, checkout bill, print/PDF, WhatsApp, and email actions.
+- BUSY-style sales voucher entry with GSTIN-based tax handling, print/PDF, WhatsApp, and email actions.
 - CRM leads, follow-ups, employee role records, notifications, and analytics insights.
 - Browser AI desk with OCR/voice workflows ready for cloud AI integration.
 - Print a clean A4 bill from the browser.

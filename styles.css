@@ -660,6 +660,29 @@ textarea:focus {
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
 }
 
+.busy-title-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  margin-bottom: 8px;
+  padding: 7px 12px;
+  color: #ffffff;
+  background: linear-gradient(90deg, #164b7b, #1f6d94 58%, #2c7787);
+  border: 1px solid #123c62;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.busy-title-strip strong {
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 #billingView .form-panel {
   border-top: 4px solid var(--cyan);
 }
@@ -706,7 +729,6 @@ textarea:focus {
   grid-template-columns: minmax(320px, 0.78fr) minmax(320px, 0.78fr);
 }
 
-.pos-layout,
 .crm-layout,
 .ai-layout {
   grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1fr);
@@ -739,25 +761,6 @@ textarea:focus {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
-}
-
-.pos-summary {
-  margin-top: 14px;
-}
-
-.pos-actions {
-  margin-top: 12px;
-}
-
-.pos-line-controls {
-  display: grid;
-  grid-template-columns: 42px minmax(72px, 1fr) minmax(92px, 1fr) 42px 42px;
-  gap: 8px;
-  align-items: center;
-}
-
-.pos-line-controls input {
-  min-height: 38px;
 }
 
 .ai-tools,
@@ -1164,7 +1167,6 @@ textarea:focus {
   .split-layout,
   .dashboard-grid,
   .money-layout,
-  .pos-layout,
   .crm-layout,
   .ai-layout,
   .masters-layout,
@@ -1257,10 +1259,6 @@ textarea:focus {
   }
 
   .item-row {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .pos-line-controls {
     grid-template-columns: 1fr 1fr;
   }
 
