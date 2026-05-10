@@ -26,13 +26,13 @@ const SERVICE_PRESETS = [
 const DEFAULT_STATE = {
   business: {
     name: "Resham Printers",
-    address: "Add shop address here",
-    phone: "",
-    email: "",
-    gstin: "",
-    state: "",
+    address: "C-71, GULMOHAR COMMERCIAL COMPLEX, SECTOR-15, NOIDA, U.P.",
+    phone: "0120-4636042, 9810514012, 8076921284",
+    email: "reshamprinter01@gmail.com",
+    gstin: "09AERPJ8701L1ZW",
+    state: "Uttar Pradesh",
     upi: "",
-    bank: "",
+    bank: "PUNJAB NATIONAL BANK\nA/C NO:07074011000420 IFSC PUNB0070710",
     defaultTax: 18,
     invoicePrefix: "RP"
   },
@@ -92,10 +92,17 @@ function normalizeState(input) {
   if (!data || typeof data !== "object" || !data.business || !Array.isArray(data.invoices)) {
     throw new Error("Invalid billing state");
   }
+  const business = { ...DEFAULT_STATE.business, ...(data.business || {}) };
+  if (!business.address || business.address === "Add shop address here") business.address = DEFAULT_STATE.business.address;
+  if (!business.phone) business.phone = DEFAULT_STATE.business.phone;
+  if (!business.email) business.email = DEFAULT_STATE.business.email;
+  if (!business.gstin) business.gstin = DEFAULT_STATE.business.gstin;
+  if (!business.state) business.state = DEFAULT_STATE.business.state;
+  if (!business.bank) business.bank = DEFAULT_STATE.business.bank;
   return {
     ...DEFAULT_STATE,
     ...data,
-    business: { ...DEFAULT_STATE.business, ...(data.business || {}) },
+    business,
     cloud: { ...DEFAULT_STATE.cloud, ...(data.cloud || {}), token: "" },
     invoices: Array.isArray(data.invoices) ? data.invoices : [],
     parties: Array.isArray(data.parties) ? data.parties : [],

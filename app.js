@@ -4,13 +4,13 @@ const LEGACY_STORAGE_KEYS = ["resham-printers-ledger-v1"];
 const DEFAULT_STATE = {
   business: {
     name: "Resham Printers",
-    address: "Add shop address here",
-    phone: "",
-    email: "",
-    gstin: "",
-    state: "",
+    address: "C-71, GULMOHAR COMMERCIAL COMPLEX, SECTOR-15, NOIDA, U.P.",
+    phone: "0120-4636042, 9810514012, 8076921284",
+    email: "reshamprinter01@gmail.com",
+    gstin: "09AERPJ8701L1ZW",
+    state: "Uttar Pradesh",
     upi: "",
-    bank: "",
+    bank: "PUNJAB NATIONAL BANK\nA/C NO:07074011000420 IFSC PUNB0070710",
     defaultTax: 18,
     invoicePrefix: "RP"
   },
@@ -221,6 +221,20 @@ function money(value) {
   return `Rs. ${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function billAmount(value) {
+  return Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function billQty(value) {
+  return Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function billDate(value) {
+  if (!value) return "";
+  const [year, month, day] = String(value).split("-");
+  return year && month && day ? `${day}-${month}-${year}` : formatDate(value);
+}
+
 function numberValue(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
@@ -314,6 +328,7 @@ function createBlankItem(overrides = {}) {
     unit: "job",
     qty: 1,
     rate: 0,
+    discount: 0,
     tax: numberValue(state?.business?.defaultTax ?? DEFAULT_STATE.business.defaultTax),
     ...overrides
   };
@@ -324,7 +339,9 @@ function calculateInvoice(invoice) {
   const showTax = invoice.billType === "gst";
   const items = (invoice.items || []).map((item) => {
     const qty = Math.max(0, numberValue(item.qty));
-    const rate = Math.max(0, numberValue(item.rate));
+    const listPrice = Math.max(0, numberValue(item.rate));
+    const discount = Math.max(0, Math.min(100, numberValue(item.discount)));
+    const rate = listPrice * (1 - discount / 100);
     const taxRate = Math.max(0, numberValue(item.tax));
     const gross = qty * rate;
     const taxable = showTax && taxMode === "inclusive" && taxRate > 0
@@ -341,6 +358,8 @@ function calculateInvoice(invoice) {
       unit: item.unit || "job",
       qty,
       rate,
+      listPrice,
+      discount,
       tax: taxRate,
       taxable,
       taxAmount,
@@ -658,6 +677,10 @@ function renderItemEditor() {
         <input type="number" data-field="rate" min="0" step="0.01" value="${escapeHtml(item.rate)}">
       </label>
       <label>
+        <span>Disc %</span>
+        <input type="number" data-field="discount" min="0" max="100" step="0.01" value="${escapeHtml(item.discount || 0)}">
+      </label>
+      <label>
         <span>Tax %</span>
         <input type="number" data-field="tax" min="0" step="0.01" value="${escapeHtml(item.tax)}">
       </label>
@@ -692,12 +715,24 @@ function currentInvoiceDraft() {
         unit: String(item.unit || "job").trim() || "job",
         qty: numberValue(item.qty),
         rate: numberValue(item.rate),
+        discount: numberValue(item.discount),
         tax: numberValue(item.tax)
       }))
       .filter((item) => item.description),
     discount: numberValue($("#invoiceDiscount").value),
     paid: numberValue($("#invoicePaid").value),
     notes: $("#invoiceNotes").value.trim(),
+    vehicleNo: $("#vehicleNo").value.trim(),
+    station: $("#station").value.trim(),
+    transport: $("#transport").value.trim() || "NA",
+    grNo: $("#grNo").value.trim(),
+    purchaseOrder: $("#purchaseOrder").value.trim(),
+    gemInvoiceNo: $("#gemInvoiceNo").value.trim(),
+    reverseCharge: $("#reverseCharge").value,
+    ewayBillNo: $("#ewayBillNo").value.trim(),
+    shippedName: $("#shippedName").value.trim(),
+    shippedAddress: $("#shippedAddress").value.trim(),
+    shippedGstin: $("#shippedGstin").value.trim(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -707,6 +742,7 @@ function renderInvoiceSummary() {
   const draft = currentInvoiceDraft();
   const calc = calculateInvoice(draft);
   const mode = gstMode(draft);
+  const ewayNeeded = calc.total > 50000;
   $("#invoiceSummary").innerHTML = `
     <div class="summary-row"><span>Subtotal</span><strong>${money(calc.taxable)}</strong></div>
     <div class="summary-row"><span>GST ${mode.type === "none" ? "" : `(${mode.label})`}</span><strong>${money(calc.tax)}</strong></div>
@@ -715,6 +751,13 @@ function renderInvoiceSummary() {
     <div class="summary-row"><span>Pending</span><strong>${money(calc.due)}</strong></div>
     ${mode.place ? `<div class="summary-row"><span>Place of supply</span><strong>${escapeHtml(mode.place)}</strong></div>` : ""}
   `;
+  const ewayInfo = $("#ewayInfo");
+  if (ewayInfo) {
+    ewayInfo.innerHTML = `
+      <span class="${ewayNeeded ? "warn" : "ok"}">${ewayNeeded ? "E-Way Bill may be required because invoice value is above Rs. 50,000." : "E-Way Bill is usually not required below Rs. 50,000."}</span>
+      <span>Use this only for goods movement and transport details.</span>
+    `;
+  }
 }
 
 function resetInvoiceForm() {
@@ -728,6 +771,17 @@ function resetInvoiceForm() {
   $("#invoiceDiscount").value = 0;
   $("#invoicePaid").value = 0;
   $("#placeOfSupply").value = "";
+  $("#vehicleNo").value = "";
+  $("#station").value = "";
+  $("#transport").value = "NA";
+  $("#grNo").value = "";
+  $("#purchaseOrder").value = "";
+  $("#gemInvoiceNo").value = "";
+  $("#reverseCharge").value = "N";
+  $("#ewayBillNo").value = "";
+  $("#shippedName").value = "";
+  $("#shippedAddress").value = "";
+  $("#shippedGstin").value = "";
   invoiceItems = [createBlankItem({ description: "Printing work", qty: 1, rate: 0 })];
   renderItemEditor();
   renderGstinInfo();
@@ -797,7 +851,9 @@ function collectInvoiceForSave() {
     updatedAt: new Date().toISOString()
   };
   const calc = calculateInvoice(invoice);
-  invoice.items = calc.items.filter((item) => item.description);
+  invoice.items = invoice.items
+    .filter((item) => item.description)
+    .map((item) => ({ ...item, discount: Math.max(0, Math.min(100, numberValue(item.discount))) }));
   invoice.paid = calc.paid;
   invoice.discount = calc.discount;
   return invoice;
@@ -833,6 +889,7 @@ function upsertItemsFromInvoice(invoice) {
       hsn: line.hsn || "",
       unit: line.unit || "job",
       rate: numberValue(line.rate),
+      discount: numberValue(line.discount),
       tax: numberValue(line.tax),
       updatedAt: new Date().toISOString()
     };
@@ -891,6 +948,17 @@ function loadInvoiceIntoForm(id) {
   $("#invoiceDiscount").value = invoice.discount || 0;
   $("#invoicePaid").value = invoice.paid || 0;
   $("#invoiceNotes").value = invoice.notes || "";
+  $("#vehicleNo").value = invoice.vehicleNo || "";
+  $("#station").value = invoice.station || "";
+  $("#transport").value = invoice.transport || "NA";
+  $("#grNo").value = invoice.grNo || "";
+  $("#purchaseOrder").value = invoice.purchaseOrder || "";
+  $("#gemInvoiceNo").value = invoice.gemInvoiceNo || "";
+  $("#reverseCharge").value = invoice.reverseCharge || "N";
+  $("#ewayBillNo").value = invoice.ewayBillNo || "";
+  $("#shippedName").value = invoice.shippedName || "";
+  $("#shippedAddress").value = invoice.shippedAddress || "";
+  $("#shippedGstin").value = invoice.shippedGstin || "";
   invoiceItems = (invoice.items || []).length ? clone(invoice.items) : [createBlankItem()];
   renderItemEditor();
   renderGstinInfo();
@@ -931,118 +999,153 @@ function renderInvoicePrint(invoice) {
   const title = invoiceTitle(invoice.billType);
   const showTax = invoice.billType === "gst";
   const mode = gstMode(invoice);
-  const colCount = showTax ? 9 : 7;
-  const rows = calc.items.map((item, index) => {
-    return `
+  const totalQty = calc.items.reduce((sum, item) => sum + item.qty, 0);
+  const shippedName = invoice.shippedName || invoice.customerName || "Customer";
+  const shippedAddress = invoice.shippedAddress || invoice.customerAddress || "";
+  const shippedGstin = invoice.shippedGstin || invoice.customerGstin || "";
+  const taxSummary = showTax ? Array.from(calc.items.reduce((map, item) => {
+    const rate = numberValue(item.tax);
+    const current = map.get(rate) || { rate, taxable: 0, tax: 0 };
+    current.taxable += item.taxable;
+    current.tax += item.taxAmount;
+    map.set(rate, current);
+    return map;
+  }, new Map()).values()) : [];
+
+  function metaLine(label, value) {
+    return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "")}</strong></div>`;
+  }
+
+  function renderCopy(copyLabel) {
+    const rows = calc.items.map((item, index) => `
       <tr>
-        <td>${index + 1}</td>
-        <td>${escapeHtml(item.description)}</td>
-        <td>${escapeHtml(item.hsn || "")}</td>
-        <td class="num">${item.qty}</td>
-        <td>${escapeHtml(item.unit || "")}</td>
-        <td class="num">${money(item.rate)}</td>
-        ${showTax ? `<td class="num">${item.tax}%</td><td class="num">${money(item.taxAmount)}</td>` : ""}
-        <td class="num">${money(item.lineTotal)}</td>
+        <td class="center">${index + 1}.</td>
+        <td class="desc">${escapeHtml(item.description)}</td>
+        <td class="center">${escapeHtml(item.hsn || "")}</td>
+        <td class="num">${billQty(item.qty)}</td>
+        <td class="center">${escapeHtml(item.unit || "")}</td>
+        <td class="num">${billAmount(item.listPrice)}</td>
+        <td class="num">${billAmount(item.discount)} %</td>
+        <td class="num">${billAmount(item.rate)}</td>
+        <td class="num">${billAmount(item.taxable)}</td>
       </tr>
+    `).join("");
+    const cgst = mode.type === "inter" ? 0 : calc.tax / 2;
+    const sgst = mode.type === "inter" ? 0 : calc.tax / 2;
+    const igst = mode.type === "inter" ? calc.tax : 0;
+
+    return `
+      <article class="classic-invoice">
+        <div class="classic-copy-row">
+          <span>GSTIN&nbsp;&nbsp;: ${escapeHtml(business.gstin || "")}</span>
+          <span>${copyLabel}</span>
+        </div>
+        <h1>${escapeHtml(title).toUpperCase()}</h1>
+        <h2>${escapeHtml(business.name || "RESHAM PRINTERS").toUpperCase()}</h2>
+        <p class="classic-address">${escapeHtml(business.address || "")}</p>
+        <p class="classic-contact">Tel. : ${escapeHtml(business.phone || "")}${business.email ? ` &nbsp; email : ${escapeHtml(business.email)}` : ""}</p>
+
+        <section class="classic-meta">
+          <div>
+            ${metaLine("Invoice No.", invoice.number || "DRAFT")}
+            ${metaLine("Dated", billDate(invoice.date))}
+            ${metaLine("Place of Supply", mode.place ? `${mode.place}${parseGstin(invoice.customerGstin).stateCode ? ` (${parseGstin(invoice.customerGstin).stateCode})` : ""}` : "")}
+            ${metaLine("Reverse Charge", invoice.reverseCharge || "N")}
+            ${metaLine("GR/RR No.", invoice.grNo || "")}
+            ${metaLine("Transport", invoice.transport || "NA")}
+          </div>
+          <div>
+            ${metaLine("Vehicle No.", invoice.vehicleNo || "")}
+            ${metaLine("Station", invoice.station || "")}
+            ${metaLine("E-Way Bill No.", invoice.ewayBillNo || "")}
+            ${metaLine("Gem Invoice No", invoice.gemInvoiceNo || "")}
+            ${metaLine("Purchase Order", invoice.purchaseOrder || "")}
+          </div>
+        </section>
+
+        <section class="classic-parties">
+          <div>
+            <h3>Billed to&nbsp;&nbsp;:</h3>
+            <strong>${escapeHtml(invoice.customerName || "Customer")}</strong>
+            <p>${nl2br(invoice.customerAddress || "")}</p>
+            <p>GSTIN / UIN&nbsp;&nbsp;: ${escapeHtml(invoice.customerGstin || "")}</p>
+          </div>
+          <div>
+            <h3>Shipped to&nbsp;&nbsp;:</h3>
+            <strong>${escapeHtml(shippedName)}</strong>
+            <p>${nl2br(shippedAddress)}</p>
+            <p>GSTIN / UIN&nbsp;&nbsp;: ${escapeHtml(shippedGstin)}</p>
+          </div>
+        </section>
+
+        <table class="classic-items">
+          <thead>
+            <tr>
+              <th>S.N.</th>
+              <th>Description of Goods</th>
+              <th>HSN/SAC<br>Code</th>
+              <th>Qty.</th>
+              <th>Unit</th>
+              <th>List Price</th>
+              <th>Discount</th>
+              <th>Price</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || `<tr><td colspan="9" class="center">No item added</td></tr>`}
+            <tr class="classic-subtotal"><td colspan="8"></td><td class="num">${billAmount(calc.taxable)}</td></tr>
+            ${showTax && mode.type === "inter" ? `<tr class="classic-add"><td colspan="5"></td><td colspan="3">Add&nbsp;&nbsp;: IGST @ ${billAmount(taxSummary[0]?.rate || 0)} %</td><td class="num">${billAmount(igst)}</td></tr>` : ""}
+            ${showTax && mode.type !== "inter" ? `<tr class="classic-add"><td colspan="5"></td><td colspan="3">Add&nbsp;&nbsp;: CGST @ ${billAmount((taxSummary[0]?.rate || 0) / 2)} %</td><td class="num">${billAmount(cgst)}</td></tr><tr class="classic-add"><td colspan="5"></td><td colspan="3">Add&nbsp;&nbsp;: SGST @ ${billAmount((taxSummary[0]?.rate || 0) / 2)} %</td><td class="num">${billAmount(sgst)}</td></tr>` : ""}
+            <tr class="classic-add"><td colspan="5"></td><td colspan="3">Add&nbsp;&nbsp;: Rounded Off (+)</td><td class="num">0.00</td></tr>
+            <tr class="classic-grand"><td colspan="2"></td><td colspan="4">Grand Total&nbsp;&nbsp; ${billQty(totalQty)} Units</td><td colspan="3" class="num">${billAmount(calc.total)}</td></tr>
+          </tbody>
+        </table>
+
+        ${showTax ? `
+          <table class="classic-tax">
+            <thead>
+              <tr>
+                <th>Tax Rate</th>
+                <th>Taxable Amt.</th>
+                ${mode.type === "inter" ? "<th>IGST Amt.</th>" : "<th>CGST Amt.</th><th>SGST Amt.</th>"}
+                <th>Total Tax</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${taxSummary.map((row) => `
+                <tr>
+                  <td>${billAmount(row.rate).replace(".00", "")}%</td>
+                  <td class="num">${billAmount(row.taxable)}</td>
+                  ${mode.type === "inter" ? `<td class="num">${billAmount(row.tax)}</td>` : `<td class="num">${billAmount(row.tax / 2)}</td><td class="num">${billAmount(row.tax / 2)}</td>`}
+                  <td class="num">${billAmount(row.tax)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        ` : ""}
+
+        <p class="classic-words">Rupees ${escapeHtml(numberToIndianWords(Math.round(calc.total)).replace(/ rupees$/i, ""))} Only</p>
+        <section class="classic-bottom">
+          <div>
+            <p><strong>Bank Details :</strong> ${nl2br(business.bank || "")}</p>
+            <h3>Terms & Conditions</h3>
+            <p>E.& O.E.</p>
+            <p>1. Goods once sold will not be taken back.</p>
+            <p>2. Interest @ 18% p.a. will be charged if the payment is not made with in the stipulated time.</p>
+            <p>3. Subject to 'Uttar Pradesh' Jurisdiction only.</p>
+          </div>
+          <div>
+            <p>Receiver's Signature :</p>
+            <p class="classic-for">For ${escapeHtml(business.name || "RESHAM PRINTERS").toUpperCase()}</p>
+            <p class="classic-sign">Authorised Signatory</p>
+          </div>
+        </section>
+      </article>
     `;
-  }).join("");
-  const taxSummary = showTax
-    ? Array.from(calc.items.reduce((map, item) => {
-      const rate = numberValue(item.tax);
-      const current = map.get(rate) || { rate, taxable: 0, tax: 0 };
-      current.taxable += item.taxable;
-      current.tax += item.taxAmount;
-      map.set(rate, current);
-      return map;
-    }, new Map()).values())
-    : [];
+  }
 
-  return `
-    <div class="print-document">
-      <header class="print-header">
-        <div>
-          <h1>${escapeHtml(business.name || "Resham Printers")}</h1>
-          <p>${nl2br(business.address || "")}</p>
-          ${business.phone ? `<p>Phone: ${escapeHtml(business.phone)}</p>` : ""}
-          ${business.email ? `<p>Email: ${escapeHtml(business.email)}</p>` : ""}
-          ${business.gstin ? `<p>GSTIN: ${escapeHtml(business.gstin)}</p>` : ""}
-          ${business.state ? `<p>State: ${escapeHtml(business.state)}</p>` : ""}
-        </div>
-        <div class="print-title-box">
-          <strong>${title}</strong>
-          <span>No: ${escapeHtml(invoice.number || "DRAFT")}</span>
-          <span>Date: ${formatDate(invoice.date)}</span>
-        </div>
-      </header>
-
-      <section class="print-parties">
-        <div class="print-box">
-          <h2>Bill To</h2>
-          <p><strong>${escapeHtml(invoice.customerName || "Customer")}</strong></p>
-          ${invoice.customerPhone ? `<p>Phone: ${escapeHtml(invoice.customerPhone)}</p>` : ""}
-          ${invoice.customerAddress ? `<p>${nl2br(invoice.customerAddress)}</p>` : ""}
-          ${invoice.customerGstin ? `<p>GSTIN: ${escapeHtml(invoice.customerGstin)}</p>` : ""}
-          ${mode.place ? `<p>Place of Supply: ${escapeHtml(mode.place)}</p>` : ""}
-        </div>
-        <div class="print-box">
-          <h2>Payment Details</h2>
-          <p>Method: ${escapeHtml(invoice.paymentMethod || "Cash")}</p>
-          ${showTax ? `<p>Tax Type: ${escapeHtml(mode.label)}</p>` : ""}
-          ${showTax ? `<p>Tax Mode: ${calc.taxMode === "inclusive" ? "Inclusive" : "Exclusive"}</p>` : ""}
-          ${business.upi ? `<p>UPI: ${escapeHtml(business.upi)}</p>` : ""}
-          ${business.bank ? `<p>${nl2br(business.bank)}</p>` : ""}
-        </div>
-      </section>
-
-      <table class="print-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Description</th>
-            <th>HSN/SAC</th>
-            <th class="num">Qty</th>
-            <th>Unit</th>
-            <th class="num">Rate</th>
-            ${showTax ? `<th class="num">GST</th><th class="num">Tax</th>` : ""}
-            <th class="num">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows || `<tr><td colspan="${colCount}">No item added</td></tr>`}
-        </tbody>
-      </table>
-
-      <section class="print-totals">
-        <div class="amount-words">
-          <h2>Amount in words</h2>
-          <p>${escapeHtml(numberToIndianWords(Math.round(calc.total)))} only</p>
-          ${invoice.notes ? `<h2>Notes</h2><p>${nl2br(invoice.notes)}</p>` : ""}
-          ${taxSummary.length ? `
-            <h2>GST Summary</h2>
-            ${taxSummary.map((row) => `<p>${row.rate}% on ${money(row.taxable)} = ${money(row.tax)}</p>`).join("")}
-          ` : ""}
-        </div>
-        <div class="total-box">
-          <h2>Summary</h2>
-          <div class="total-line"><span>Subtotal</span><strong>${money(calc.taxable)}</strong></div>
-          ${showTax && mode.type === "inter" ? `<div class="total-line"><span>IGST</span><strong>${money(calc.tax)}</strong></div>` : ""}
-          ${showTax && mode.type !== "inter" ? `<div class="total-line"><span>CGST</span><strong>${money(calc.tax / 2)}</strong></div><div class="total-line"><span>SGST</span><strong>${money(calc.tax / 2)}</strong></div>` : ""}
-          <div class="total-line"><span>Discount</span><strong>${money(calc.discount)}</strong></div>
-          <div class="total-line grand"><span>Total</span><strong>${money(calc.total)}</strong></div>
-          <div class="total-line"><span>Received</span><strong>${money(calc.paid)}</strong></div>
-          <div class="total-line"><span>Balance</span><strong>${money(calc.due)}</strong></div>
-        </div>
-      </section>
-
-      <footer class="print-footer">
-        <div>
-          <p>Thank you for your business.</p>
-          <p>Goods once printed as approved design are not returnable unless agreed by ${escapeHtml(business.name || "Resham Printers")}.</p>
-        </div>
-        <div class="signature-box">Authorised Signatory</div>
-      </footer>
-    </div>
-  `;
+  return `${renderCopy("Original Copy")}<div class="print-page-break"></div>${renderCopy("Duplicate Copy")}`;
 }
 
 function numberToIndianWords(value) {
@@ -1669,11 +1772,22 @@ function exportBackup() {
   showToast("Backup downloaded.");
 }
 
+function normalizeBusiness(input = {}) {
+  const business = { ...clone(DEFAULT_STATE.business), ...input };
+  if (!business.address || business.address === "Add shop address here") business.address = DEFAULT_STATE.business.address;
+  if (!business.phone) business.phone = DEFAULT_STATE.business.phone;
+  if (!business.email) business.email = DEFAULT_STATE.business.email;
+  if (!business.gstin) business.gstin = DEFAULT_STATE.business.gstin;
+  if (!business.state) business.state = DEFAULT_STATE.business.state;
+  if (!business.bank) business.bank = DEFAULT_STATE.business.bank;
+  return business;
+}
+
 function normalizeImportedState(imported) {
   return {
     ...clone(DEFAULT_STATE),
     ...imported,
-    business: { ...clone(DEFAULT_STATE.business), ...(imported.business || {}) },
+    business: normalizeBusiness(imported.business || {}),
     cloud: { ...clone(DEFAULT_STATE.cloud), ...(imported.cloud || {}) },
     invoices: Array.isArray(imported.invoices) ? imported.invoices.map((invoice) => ({ taxMode: "exclusive", ...invoice })) : [],
     parties: Array.isArray(imported.parties) ? imported.parties : [],
@@ -1719,23 +1833,63 @@ function csvEscape(value) {
 
 function exportCsv() {
   const rows = [
-    ["Date", "Invoice", "Bill Type", "Party", "GSTIN", "Payment Method", "Tax Mode", "Taxable", "GST", "Total", "Received", "Pending"],
-    ...state.invoices.map((invoice) => {
+    [
+      "Invoice No", "Dated", "Bill Type", "Place of Supply", "Reverse Charge", "Vehicle No", "Station", "E-Way Bill No",
+      "GEM Invoice No", "GR/RR No", "Purchase Order", "Transport", "Billed To", "Billed GSTIN", "Billed Address",
+      "Shipped To", "Shipped GSTIN", "Shipped Address", "S.N.", "Description of Goods", "HSN/SAC Code", "Qty",
+      "Unit", "List Price", "Discount %", "Price", "Tax %", "Line Taxable", "Invoice Taxable", "CGST", "SGST",
+      "IGST", "Total Tax", "Grand Total", "Received", "Pending", "Payment Method", "Notes"
+    ],
+    ...state.invoices.flatMap((invoice) => {
       const calc = calculateInvoice(invoice);
-      return [
-        invoice.date,
+      const mode = gstMode(invoice);
+      const shippedName = invoice.shippedName || invoice.customerName || "";
+      const shippedAddress = invoice.shippedAddress || invoice.customerAddress || "";
+      const shippedGstin = invoice.shippedGstin || invoice.customerGstin || "";
+      const cgst = invoice.billType === "gst" && mode.type !== "inter" ? calc.tax / 2 : 0;
+      const sgst = invoice.billType === "gst" && mode.type !== "inter" ? calc.tax / 2 : 0;
+      const igst = invoice.billType === "gst" && mode.type === "inter" ? calc.tax : 0;
+      const lines = calc.items.length ? calc.items : [createBlankItem()];
+      return lines.map((item, index) => [
         invoice.number,
+        invoice.date,
         invoiceTitle(invoice.billType),
-        invoice.customerName,
+        mode.place || invoice.placeOfSupply || "",
+        invoice.reverseCharge || "N",
+        invoice.vehicleNo || "",
+        invoice.station || "",
+        invoice.ewayBillNo || "",
+        invoice.gemInvoiceNo || "",
+        invoice.grNo || "",
+        invoice.purchaseOrder || "",
+        invoice.transport || "NA",
+        invoice.customerName || "",
         invoice.customerGstin || "",
-        invoice.paymentMethod || "",
-        calc.taxMode,
+        invoice.customerAddress || "",
+        shippedName,
+        shippedGstin,
+        shippedAddress,
+        index + 1,
+        item.description || "",
+        item.hsn || "",
+        item.qty || 0,
+        item.unit || "",
+        numberValue(item.listPrice ?? item.rate).toFixed(2),
+        numberValue(item.discount).toFixed(2),
+        numberValue(item.rate).toFixed(2),
+        numberValue(item.tax).toFixed(2),
+        numberValue(item.taxable).toFixed(2),
         calc.taxable.toFixed(2),
+        cgst.toFixed(2),
+        sgst.toFixed(2),
+        igst.toFixed(2),
         calc.tax.toFixed(2),
         calc.total.toFixed(2),
         calc.paid.toFixed(2),
-        calc.due.toFixed(2)
-      ];
+        calc.due.toFixed(2),
+        invoice.paymentMethod || "",
+        invoice.notes || ""
+      ]);
     })
   ];
   const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
@@ -1796,6 +1950,9 @@ function applyPartyDetailsToInvoice() {
   $("#customerAddress").value = party.address || "";
   $("#customerGstin").value = party.gstin || "";
   $("#placeOfSupply").value = parseGstin(party.gstin).stateName || "";
+  if (!$("#shippedName").value) $("#shippedName").value = party.name || "";
+  if (!$("#shippedAddress").value) $("#shippedAddress").value = party.address || "";
+  if (!$("#shippedGstin").value) $("#shippedGstin").value = party.gstin || "";
   renderGstinInfo();
 }
 
@@ -1884,6 +2041,7 @@ function bindEvents() {
           hsn: masterItem.hsn || "",
           unit: masterItem.unit || "job",
           rate: numberValue(masterItem.rate),
+          discount: numberValue(masterItem.discount),
           tax: numberValue(masterItem.tax)
         };
         renderItemEditor();

@@ -18,6 +18,7 @@ The UI is built as a BUSY-inspired billing desk without copying BUSY's proprieta
 - Billing: GST invoice, simple bill, estimate, print/PDF through browser print, WhatsApp and email share links
 - Masters: customer/supplier party master and item/service master with HSN/SAC, unit, GST, rate, barcode/SKU
 - GST voucher entry: GSTIN state detection, intra/inter-state tax display, tax-inclusive/exclusive pricing, saved invoice print layouts
+- Sample bill print format: original/duplicate tax invoice copies, billed-to/shipped-to sections, dispatch reference fields, E-Way Bill field, line discount, GST summary, bank details, and terms
 - Backend API: `GET /api/state`, `PUT /api/state`, `POST /api/state`, and `GET /api/health`
 - Reports: monthly billing, GST collected, pending dues, payment-wise summaries, CSV export
 - CRM: leads, follow-ups, expected value, assigned owner

@@ -183,6 +183,62 @@
                   <select id="invoicePaymentMethod"></select>
                 </label>
 
+                <div class="full-span bill-subsection">
+                  <span class="eyebrow">Dispatch and reference details</span>
+                </div>
+                <label>
+                  <span>Vehicle No.</span>
+                  <input id="vehicleNo" type="text" placeholder="Optional">
+                </label>
+                <label>
+                  <span>Station</span>
+                  <input id="station" type="text" placeholder="Optional">
+                </label>
+                <label>
+                  <span>Transport</span>
+                  <input id="transport" type="text" placeholder="NA">
+                </label>
+                <label>
+                  <span>GR/RR No.</span>
+                  <input id="grNo" type="text" placeholder="Optional">
+                </label>
+                <label>
+                  <span>Purchase Order</span>
+                  <input id="purchaseOrder" type="text" placeholder="Optional">
+                </label>
+                <label>
+                  <span>GEM Invoice No.</span>
+                  <input id="gemInvoiceNo" type="text" placeholder="Optional">
+                </label>
+                <label>
+                  <span>Reverse Charge</span>
+                  <select id="reverseCharge">
+                    <option value="N">N</option>
+                    <option value="Y">Y</option>
+                  </select>
+                </label>
+                <label>
+                  <span>E-Way Bill No.</span>
+                  <input id="ewayBillNo" type="text" placeholder="Only if applicable">
+                </label>
+                <div class="full-span gstin-info" id="ewayInfo"></div>
+
+                <div class="full-span bill-subsection">
+                  <span class="eyebrow">Shipped to</span>
+                </div>
+                <label>
+                  <span>Shipped party</span>
+                  <input id="shippedName" type="text" placeholder="Same as billed party">
+                </label>
+                <label>
+                  <span>Shipped GSTIN</span>
+                  <input id="shippedGstin" type="text" placeholder="Optional">
+                </label>
+                <label class="full-span">
+                  <span>Shipped address</span>
+                  <textarea id="shippedAddress" rows="2" placeholder="Same as billed address"></textarea>
+                </label>
+
                 <div class="full-span billing-tools">
                   <div>
                     <span class="eyebrow">Quick services</span>

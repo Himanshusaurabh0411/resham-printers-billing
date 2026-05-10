@@ -8,6 +8,8 @@ BUSY-inspired billing and GST website for Resham Printers.
 - Busy-style party/customer masters and item/service masters.
 - Add printing services/items with HSN/SAC, unit, GST %, discounts, received amount, and pending amount.
 - BUSY-style sales voucher entry with GSTIN-based tax handling, tax-inclusive/exclusive pricing, print/PDF, WhatsApp, and email actions.
+- Resham Printers bill format matching the supplied sample PDF: original/duplicate copy, billed/shipped blocks, dispatch references, item discount columns, GST summary, bank details, and terms.
+- Separate E-Way Bill field with a Rs. 50,000 value warning instead of mixing E-Way details into every normal bill.
 - CRM leads, follow-ups, employee role records, notifications, and analytics insights.
 - Browser AI desk with OCR/voice workflows ready for cloud AI integration.
 - Print a clean A4 bill from the browser.
