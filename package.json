@@ -1,0 +1,13 @@
+{
+  "name": "resham-printers-billing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BUSY-style billing and GST web app for Resham Printers.",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check app.js && node --check server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

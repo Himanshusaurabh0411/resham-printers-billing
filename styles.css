@@ -874,10 +874,6 @@ textarea:focus {
   padding-left: 34px;
 }
 
-.money-layout {
-  grid-template-columns: minmax(320px, 0.7fr) minmax(0, 1fr);
-}
-
 .report-toolbar {
   justify-content: flex-end;
   margin-bottom: 16px;
@@ -1166,7 +1162,6 @@ textarea:focus {
 
   .split-layout,
   .dashboard-grid,
-  .money-layout,
   .crm-layout,
   .ai-layout,
   .masters-layout,

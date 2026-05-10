@@ -34,17 +34,9 @@
             <span data-icon="users"></span>
             <span>CRM</span>
           </button>
-          <button class="nav-tab" data-view="money" type="button">
-            <span data-icon="wallet"></span>
-            <span>Money</span>
-          </button>
-          <button class="nav-tab" data-view="ledger" type="button">
-            <span data-icon="book"></span>
-            <span>Ledger</span>
-          </button>
           <button class="nav-tab" data-view="reports" type="button">
             <span data-icon="chart"></span>
-            <span>Reports</span>
+            <span>GST Reports</span>
           </button>
           <button class="nav-tab" data-view="ai" type="button">
             <span data-icon="spark"></span>
@@ -90,7 +82,7 @@
             <article class="panel cash-panel">
               <div class="panel-heading">
                 <div>
-                  <span class="eyebrow">Cashflow</span>
+                  <span class="eyebrow">Billing pulse</span>
                   <h2>This month</h2>
                 </div>
                 <span class="mini-badge" id="monthBadge"></span>
@@ -104,7 +96,7 @@
                   <span class="eyebrow">Pending</span>
                   <h2>Customers to collect</h2>
                 </div>
-                <button class="icon-button" data-view-jump="ledger" type="button" aria-label="Open ledger">
+                <button class="icon-button" data-view-jump="billing" type="button" aria-label="Open billing">
                   <span data-icon="arrowRight"></span>
                 </button>
               </div>
@@ -114,10 +106,10 @@
             <article class="panel wide-panel">
               <div class="panel-heading">
                 <div>
-                  <span class="eyebrow">Activity</span>
-                  <h2>Latest money movement</h2>
+                  <span class="eyebrow">Recent vouchers</span>
+                  <h2>Latest bills</h2>
                 </div>
-                <button class="icon-button" data-view-jump="money" type="button" aria-label="Open money page">
+                <button class="icon-button" data-view-jump="billing" type="button" aria-label="Open billing">
                   <span data-icon="arrowRight"></span>
                 </button>
               </div>
@@ -151,6 +143,13 @@
                     <option value="gst">GST invoice</option>
                     <option value="simple">Simple bill</option>
                     <option value="estimate">Estimate</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Tax mode</span>
+                  <select id="invoiceTaxMode">
+                    <option value="exclusive">Tax exclusive</option>
+                    <option value="inclusive">Tax inclusive</option>
                   </select>
                 </label>
                 <label>
@@ -465,99 +464,6 @@
           </div>
         </section>
 
-        <section id="moneyView" class="view">
-          <div class="split-layout money-layout">
-            <article class="panel form-panel">
-              <div class="panel-heading">
-                <div>
-                  <span class="eyebrow">Entry</span>
-                  <h2>Money in / money out</h2>
-                </div>
-              </div>
-              <form id="transactionForm" class="form-grid">
-                <label>
-                  <span>Type</span>
-                  <select id="transactionType">
-                    <option value="income">Money in</option>
-                    <option value="expense">Money out</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Date</span>
-                  <input id="transactionDate" type="date" required>
-                </label>
-                <label>
-                  <span>Party / source</span>
-                  <input id="transactionParty" type="text" list="partyOptions" placeholder="Customer, supplier, owner" required>
-                </label>
-                <label>
-                  <span>Category</span>
-                  <input id="transactionCategory" type="text" list="categoryOptions" placeholder="Ink, paper, salary">
-                  <datalist id="categoryOptions">
-                    <option value="Printing sale"></option>
-                    <option value="Advance received"></option>
-                    <option value="Paper purchase"></option>
-                    <option value="Ink and toner"></option>
-                    <option value="Electricity"></option>
-                    <option value="Rent"></option>
-                    <option value="Salary"></option>
-                    <option value="Machine repair"></option>
-                    <option value="Transport"></option>
-                  </datalist>
-                </label>
-                <label>
-                  <span>Amount</span>
-                  <input id="transactionAmount" type="number" min="0" step="0.01" required>
-                </label>
-                <label>
-                  <span>Payment method</span>
-                  <select id="transactionMethod"></select>
-                </label>
-                <label class="full-span">
-                  <span>Note</span>
-                  <textarea id="transactionNote" rows="2" placeholder="What happened?"></textarea>
-                </label>
-                <div class="full-span action-row">
-                  <button class="primary-button" type="submit">
-                    <span data-icon="save"></span>
-                    Save entry
-                  </button>
-                </div>
-              </form>
-            </article>
-
-            <article class="panel">
-              <div class="panel-heading">
-                <div>
-                  <span class="eyebrow">Register</span>
-                  <h2>All entries</h2>
-                </div>
-                <label class="search-box">
-                  <span data-icon="search"></span>
-                  <input id="transactionSearch" type="search" placeholder="Search">
-                </label>
-              </div>
-              <div id="transactionTable" class="table-shell"></div>
-            </article>
-          </div>
-        </section>
-
-        <section id="ledgerView" class="view">
-          <article class="panel">
-            <div class="panel-heading">
-              <div>
-                <span class="eyebrow">Customer ledger</span>
-                <h2>Who paid, who is pending</h2>
-              </div>
-              <button class="ghost-button small-button" id="printLedgerBtn" type="button">
-                <span data-icon="printer"></span>
-                Print
-              </button>
-            </div>
-            <div id="ledgerTable" class="table-shell"></div>
-          </article>
-        </section>
-
         <section id="reportsView" class="view">
           <div class="report-toolbar">
             <label>
@@ -577,7 +483,7 @@
             <article class="panel">
               <div class="panel-heading">
                 <div>
-                  <span class="eyebrow">Profit / loss</span>
+                  <span class="eyebrow">GST billing</span>
                   <h2>Month summary</h2>
                 </div>
               </div>
@@ -586,17 +492,17 @@
             <article class="panel">
               <div class="panel-heading">
                 <div>
-                  <span class="eyebrow">Expense</span>
-                  <h2>Category split</h2>
+                  <span class="eyebrow">GST</span>
+                  <h2>Rate-wise tax</h2>
                 </div>
               </div>
-              <div id="expenseBars" class="bar-list"></div>
+              <div id="taxBars" class="bar-list"></div>
             </article>
             <article class="panel wide-panel">
               <div class="panel-heading">
                 <div>
-                  <span class="eyebrow">Payments</span>
-                  <h2>Method-wise movement</h2>
+                  <span class="eyebrow">Collections</span>
+                  <h2>Payment-wise billing</h2>
                 </div>
               </div>
               <div id="methodBars" class="bar-list"></div>
@@ -718,18 +624,17 @@
             <article class="panel">
               <div class="panel-heading">
                 <div>
-                  <span class="eyebrow">Online storage</span>
-                  <h2>Cloud sync setup</h2>
+                  <span class="eyebrow">Backend</span>
+                  <h2>Online database setup</h2>
                 </div>
               </div>
               <div class="cloud-setup">
                 <p>
-                  This version works immediately in the browser. To store the same data online for multiple devices,
-                  connect a small cloud API endpoint here, or later share Firebase/Supabase details and I can wire it fully.
+                  Run the included backend server or connect a hosted API endpoint here. The app keeps a local backup and syncs billing data to the backend when available.
                 </p>
                 <label>
-                  <span>Cloud API endpoint</span>
-                  <input id="cloudEndpoint" type="url" placeholder="https://your-api.com/resham-printers">
+                  <span>Backend API endpoint</span>
+                  <input id="cloudEndpoint" type="url" placeholder="https://your-api.com/api/state">
                 </label>
                 <label>
                   <span>Sync token</span>

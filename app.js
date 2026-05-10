@@ -1,4 +1,5 @@
-const STORAGE_KEY = "resham-printers-ledger-v1";
+const STORAGE_KEY = "resham-printers-billing-v2";
+const LEGACY_STORAGE_KEYS = ["resham-printers-ledger-v1"];
 
 const DEFAULT_STATE = {
   business: {
@@ -75,6 +76,8 @@ let currentView = "dashboard";
 let editingInvoiceId = null;
 let invoiceItems = [createBlankItem()];
 let toastTimer = null;
+let backendSyncTimer = null;
+let hydratingBackend = false;
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -93,33 +96,96 @@ function seedItems() {
 
 function loadState() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const savedText = localStorage.getItem(STORAGE_KEY) || LEGACY_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
+    const saved = JSON.parse(savedText);
     if (!saved || typeof saved !== "object") {
       return { ...clone(DEFAULT_STATE), items: seedItems() };
     }
-    return {
-      ...clone(DEFAULT_STATE),
-      ...saved,
-      business: { ...clone(DEFAULT_STATE.business), ...(saved.business || {}) },
-      cloud: { ...clone(DEFAULT_STATE.cloud), ...(saved.cloud || {}) },
-      invoices: Array.isArray(saved.invoices) ? saved.invoices : [],
-      parties: Array.isArray(saved.parties) ? saved.parties : [],
-      items: Array.isArray(saved.items) ? saved.items : seedItems(),
-      leads: Array.isArray(saved.leads) ? saved.leads : [],
-      employees: Array.isArray(saved.employees) && saved.employees.length ? saved.employees : clone(DEFAULT_STATE.employees),
-      activeEmployeeId: saved.activeEmployeeId || "owner",
-      notifications: Array.isArray(saved.notifications) ? saved.notifications : [],
-      transactions: Array.isArray(saved.transactions) ? saved.transactions : [],
-      paymentMethods: Array.isArray(saved.paymentMethods) ? saved.paymentMethods : clone(DEFAULT_STATE.paymentMethods)
-    };
+    return normalizeImportedState(saved);
   } catch (error) {
     console.warn("Could not load saved data", error);
     return { ...clone(DEFAULT_STATE), items: seedItems() };
   }
 }
 
-function saveState() {
+function saveState(options = {}) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (options.syncBackend !== false) queueBackendSync();
+}
+
+function canUseSameOriginBackend() {
+  return window.location.protocol.startsWith("http") && !window.location.hostname.endsWith("github.io");
+}
+
+function backendEndpoint() {
+  return state.cloud.endpoint || (canUseSameOriginBackend() ? `${window.location.origin}/api/state` : "");
+}
+
+function backendHeaders() {
+  return {
+    "Content-Type": "application/json",
+    ...(state.cloud.token ? { Authorization: `Bearer ${state.cloud.token}` } : {})
+  };
+}
+
+function publicStateForBackend() {
+  const payload = clone(state);
+  payload.cloud.token = "";
+  return payload;
+}
+
+function queueBackendSync() {
+  if (hydratingBackend || !backendEndpoint()) return;
+  clearTimeout(backendSyncTimer);
+  backendSyncTimer = setTimeout(syncStateToBackend, 700);
+}
+
+async function syncStateToBackend() {
+  const endpoint = backendEndpoint();
+  if (!endpoint) return false;
+  try {
+    const response = await fetch(endpoint, {
+      method: "PUT",
+      headers: backendHeaders(),
+      body: JSON.stringify({ data: publicStateForBackend(), savedAt: new Date().toISOString() })
+    });
+    if (!response.ok) throw new Error(`Backend returned ${response.status}`);
+    state.cloud.lastSync = new Date().toISOString();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    renderBusinessShell();
+    if (currentView === "settings") renderSettingsForm();
+    return true;
+  } catch (error) {
+    console.warn("Backend sync failed", error);
+    if (currentView === "settings") {
+      $("#cloudMessage").textContent = "Backend sync failed. Check the endpoint URL and token.";
+    }
+    return false;
+  }
+}
+
+async function hydrateFromBackend() {
+  const endpoint = backendEndpoint();
+  if (!endpoint) return;
+  hydratingBackend = true;
+  const currentCloud = clone(state.cloud);
+  try {
+    const response = await fetch(endpoint, { headers: state.cloud.token ? { Authorization: `Bearer ${state.cloud.token}` } : {} });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const incoming = payload.data || payload;
+    if (!incoming || !incoming.business || !Array.isArray(incoming.invoices)) return;
+    state = normalizeImportedState(incoming);
+    state.cloud = { ...state.cloud, endpoint: currentCloud.endpoint, token: currentCloud.token, lastSync: new Date().toISOString() };
+    saveState({ syncBackend: false });
+    resetInvoiceForm();
+    renderAll();
+    showToast("Backend data loaded.");
+  } catch (error) {
+    console.warn("Could not load backend data", error);
+  } finally {
+    hydratingBackend = false;
+  }
 }
 
 function uid(prefix = "id") {
@@ -254,18 +320,35 @@ function createBlankItem(overrides = {}) {
 }
 
 function calculateInvoice(invoice) {
-  const items = (invoice.items || []).map((item) => ({
-    description: item.description || "",
-    hsn: item.hsn || "",
-    unit: item.unit || "job",
-    qty: Math.max(0, numberValue(item.qty)),
-    rate: Math.max(0, numberValue(item.rate)),
-    tax: Math.max(0, numberValue(item.tax))
-  }));
-  const taxable = items.reduce((sum, item) => sum + item.qty * item.rate, 0);
-  const tax = invoice.billType === "gst"
-    ? items.reduce((sum, item) => sum + (item.qty * item.rate * item.tax) / 100, 0)
-    : 0;
+  const taxMode = invoice.taxMode === "inclusive" ? "inclusive" : "exclusive";
+  const showTax = invoice.billType === "gst";
+  const items = (invoice.items || []).map((item) => {
+    const qty = Math.max(0, numberValue(item.qty));
+    const rate = Math.max(0, numberValue(item.rate));
+    const taxRate = Math.max(0, numberValue(item.tax));
+    const gross = qty * rate;
+    const taxable = showTax && taxMode === "inclusive" && taxRate > 0
+      ? gross / (1 + taxRate / 100)
+      : gross;
+    const taxAmount = showTax
+      ? taxMode === "inclusive"
+        ? gross - taxable
+        : (taxable * taxRate) / 100
+      : 0;
+    return {
+      description: item.description || "",
+      hsn: item.hsn || "",
+      unit: item.unit || "job",
+      qty,
+      rate,
+      tax: taxRate,
+      taxable,
+      taxAmount,
+      lineTotal: taxable + taxAmount
+    };
+  });
+  const taxable = items.reduce((sum, item) => sum + item.taxable, 0);
+  const tax = items.reduce((sum, item) => sum + item.taxAmount, 0);
   const discount = Math.min(Math.max(0, numberValue(invoice.discount)), taxable + tax);
   const total = Math.max(0, taxable + tax - discount);
   const rawPaid = invoice.billType === "estimate" ? 0 : Math.max(0, numberValue(invoice.paid));
@@ -279,7 +362,7 @@ function calculateInvoice(invoice) {
         ? "partial"
         : "due";
 
-  return { items, taxable, tax, discount, total, paid, due, status };
+  return { items, taxable, tax, discount, total, paid, due, status, taxMode };
 }
 
 function invoiceTitle(type) {
@@ -297,8 +380,8 @@ function invoiceNumberForNew() {
   return invoiceNumberPreview();
 }
 
-function allMoneyEntries() {
-  const invoiceEntries = state.invoices
+function invoicePaymentEntries() {
+  return state.invoices
     .map((invoice) => ({ invoice, calc: calculateInvoice(invoice) }))
     .filter(({ invoice, calc }) => invoice.billType !== "estimate" && calc.paid > 0)
     .map(({ invoice, calc }) => ({
@@ -312,25 +395,26 @@ function allMoneyEntries() {
       note: invoice.number,
       origin: "invoice",
       invoiceId: invoice.id
-    }));
+    }))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
 
-  const manualEntries = state.transactions.map((entry) => ({
-    ...entry,
-    amount: numberValue(entry.amount),
-    origin: "manual"
-  }));
-
-  return [...invoiceEntries, ...manualEntries].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+function recentInvoiceRows(limit = 8) {
+  return state.invoices
+    .slice()
+    .sort((a, b) => String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)))
+    .slice(0, limit);
 }
 
 function statsForMonth(month = currentMonthISO()) {
   const invoices = state.invoices.filter((invoice) => invoice.billType !== "estimate" && monthKey(invoice.date) === month);
   const invoiceCalcs = invoices.map((invoice) => calculateInvoice(invoice));
-  const entries = allMoneyEntries().filter((entry) => monthKey(entry.date) === month);
-  const moneyIn = entries.filter((entry) => entry.type === "income").reduce((sum, entry) => sum + numberValue(entry.amount), 0);
-  const moneyOut = entries.filter((entry) => entry.type === "expense").reduce((sum, entry) => sum + numberValue(entry.amount), 0);
+  const entries = invoicePaymentEntries().filter((entry) => monthKey(entry.date) === month);
+  const moneyIn = invoiceCalcs.reduce((sum, calc) => sum + calc.paid, 0);
+  const moneyOut = 0;
   const sales = invoiceCalcs.reduce((sum, calc) => sum + calc.total, 0);
   const pending = invoiceCalcs.reduce((sum, calc) => sum + calc.due, 0);
+  const gst = invoiceCalcs.reduce((sum, calc) => sum + calc.tax, 0);
 
   return {
     invoices,
@@ -339,14 +423,15 @@ function statsForMonth(month = currentMonthISO()) {
     moneyIn,
     moneyOut,
     pending,
-    profit: moneyIn - moneyOut
+    gst,
+    profit: sales
   };
 }
 
 function globalStats() {
-  const entries = allMoneyEntries();
+  const entries = invoicePaymentEntries();
   const moneyIn = entries.filter((entry) => entry.type === "income").reduce((sum, entry) => sum + numberValue(entry.amount), 0);
-  const moneyOut = entries.filter((entry) => entry.type === "expense").reduce((sum, entry) => sum + numberValue(entry.amount), 0);
+  const moneyOut = 0;
   const pending = state.invoices
     .filter((invoice) => invoice.billType !== "estimate")
     .reduce((sum, invoice) => sum + calculateInvoice(invoice).due, 0);
@@ -354,7 +439,7 @@ function globalStats() {
     .filter((invoice) => invoice.billType !== "estimate")
     .reduce((sum, invoice) => sum + calculateInvoice(invoice).total, 0);
 
-  return { moneyIn, moneyOut, pending, sales, balance: moneyIn - moneyOut };
+  return { moneyIn, moneyOut, pending, sales, balance: sales - moneyIn, invoiceCount: state.invoices.length };
 }
 
 function renderIcons(root = document) {
@@ -384,9 +469,7 @@ function setView(view) {
     billing: "Billing",
     masters: "Masters",
     crm: "CRM",
-    money: "Money",
-    ledger: "Ledger",
-    reports: "Reports",
+    reports: "GST Reports",
     ai: "AI Desk",
     settings: "Settings"
   };
@@ -396,8 +479,9 @@ function setView(view) {
 
 function renderBusinessShell() {
   $("#sideBusinessName").textContent = state.business.name || "Resham Printers";
-  $("#storageLabel").textContent = state.cloud.endpoint ? "Cloud configured" : "Local browser";
-  $("#storageDot").classList.toggle("online", Boolean(state.cloud.endpoint));
+  const endpoint = backendEndpoint();
+  $("#storageLabel").textContent = endpoint ? "Backend ready" : "Local browser";
+  $("#storageDot").classList.toggle("online", Boolean(endpoint));
   $("#todayLabel").textContent = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
     day: "2-digit",
@@ -409,13 +493,9 @@ function renderBusinessShell() {
 function renderPaymentOptions() {
   const options = state.paymentMethods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
   const invoiceMethod = $("#invoicePaymentMethod");
-  const transactionMethod = $("#transactionMethod");
   const currentInvoice = invoiceMethod.value;
-  const currentTransaction = transactionMethod.value;
   invoiceMethod.innerHTML = options;
-  transactionMethod.innerHTML = options;
   invoiceMethod.value = state.paymentMethods.includes(currentInvoice) ? currentInvoice : state.paymentMethods[0];
-  transactionMethod.value = state.paymentMethods.includes(currentTransaction) ? currentTransaction : state.paymentMethods[0];
 }
 
 function renderMasterOptions() {
@@ -432,10 +512,10 @@ function renderDashboard() {
   const month = statsForMonth(currentMonthISO());
   $("#monthBadge").textContent = formatMonth(currentMonthISO());
   $("#metricGrid").innerHTML = [
-    { label: "Money came in", value: money(all.moneyIn), sub: "Invoice payments + income" },
-    { label: "Money went out", value: money(all.moneyOut), sub: "Expenses and purchases" },
-    { label: "Cash balance", value: money(all.balance), sub: "Actual money movement" },
-    { label: "Pending collection", value: money(all.pending), sub: "Customer dues" }
+    { label: "Total billing", value: money(all.sales), sub: "Saved GST/simple bills" },
+    { label: "Amount received", value: money(all.moneyIn), sub: "From invoice settlement" },
+    { label: "Outstanding", value: money(all.pending), sub: "Pending customer amount" },
+    { label: "Bills made", value: String(all.invoiceCount), sub: "Invoices and estimates" }
   ].map((metric) => `
     <article class="metric-card">
       <span class="eyebrow">${metric.label}</span>
@@ -444,10 +524,10 @@ function renderDashboard() {
     </article>
   `).join("");
 
-  const maxFlow = Math.max(month.moneyIn, month.moneyOut, month.pending, 1);
+  const maxFlow = Math.max(month.sales, month.moneyIn, month.pending, 1);
   $("#flowVisual").innerHTML = [
-    { label: "In", value: month.moneyIn, type: "in" },
-    { label: "Out", value: month.moneyOut, type: "out" },
+    { label: "Sales", value: month.sales, type: "in" },
+    { label: "Received", value: month.moneyIn, type: "out" },
     { label: "Due", value: month.pending, type: "due" }
   ].map((row) => `
     <div class="flow-row">
@@ -458,7 +538,7 @@ function renderDashboard() {
   `).join("");
 
   renderPendingList();
-  renderActivityTable("#activityTable", allMoneyEntries().slice(0, 8), false);
+  renderInvoiceActivityTable("#activityTable", recentInvoiceRows(8));
 }
 
 function renderPendingList() {
@@ -495,6 +575,43 @@ function emptyState(message) {
         <strong>${escapeHtml(message)}</strong>
       </div>
     </div>
+  `;
+}
+
+function renderInvoiceActivityTable(selector, invoices) {
+  const target = $(selector);
+  if (!invoices.length) {
+    target.innerHTML = emptyState("No bills saved yet.");
+    return;
+  }
+  target.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Voucher</th>
+          <th>Party</th>
+          <th>Type</th>
+          <th class="amount-cell">Total</th>
+          <th class="amount-cell">Pending</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${invoices.map((invoice) => {
+          const calc = calculateInvoice(invoice);
+          return `
+            <tr>
+              <td>${formatDate(invoice.date)}</td>
+              <td><strong>${escapeHtml(invoice.number)}</strong></td>
+              <td>${escapeHtml(invoice.customerName || "Customer")}</td>
+              <td><span class="pill ${calc.status}">${escapeHtml(invoiceTitle(invoice.billType))}</span></td>
+              <td class="amount-cell">${money(calc.total)}</td>
+              <td class="amount-cell">${money(calc.due)}</td>
+            </tr>
+          `;
+        }).join("")}
+      </tbody>
+    </table>
   `;
 }
 
@@ -560,6 +677,7 @@ function currentInvoiceDraft() {
       ? state.invoices.find((invoice) => invoice.id === editingInvoiceId)?.number || invoiceNumberPreview()
       : invoiceNumberPreview(),
     billType: $("#billType").value,
+    taxMode: $("#invoiceTaxMode").value,
     date: $("#invoiceDate").value || todayISO(),
     customerName: $("#customerName").value.trim(),
     customerPhone: $("#customerPhone").value.trim(),
@@ -604,6 +722,7 @@ function resetInvoiceForm() {
   $("#billingFormTitle").textContent = "GST Billing Entry";
   $("#invoiceForm").reset();
   $("#billType").value = "gst";
+  $("#invoiceTaxMode").value = "exclusive";
   $("#invoiceDate").value = todayISO();
   $("#invoicePaymentMethod").value = state.paymentMethods[0] || "Cash";
   $("#invoiceDiscount").value = 0;
@@ -761,6 +880,7 @@ function loadInvoiceIntoForm(id) {
   editingInvoiceId = id;
   $("#billingFormTitle").textContent = `Editing ${invoice.number}`;
   $("#billType").value = invoice.billType || "gst";
+  $("#invoiceTaxMode").value = invoice.taxMode || "exclusive";
   $("#invoiceDate").value = invoice.date || todayISO();
   $("#customerName").value = invoice.customerName || "";
   $("#customerPhone").value = invoice.customerPhone || "";
@@ -813,8 +933,6 @@ function renderInvoicePrint(invoice) {
   const mode = gstMode(invoice);
   const colCount = showTax ? 9 : 7;
   const rows = calc.items.map((item, index) => {
-    const amount = item.qty * item.rate;
-    const taxAmount = showTax ? (amount * item.tax) / 100 : 0;
     return `
       <tr>
         <td>${index + 1}</td>
@@ -823,18 +941,17 @@ function renderInvoicePrint(invoice) {
         <td class="num">${item.qty}</td>
         <td>${escapeHtml(item.unit || "")}</td>
         <td class="num">${money(item.rate)}</td>
-        ${showTax ? `<td class="num">${item.tax}%</td><td class="num">${money(taxAmount)}</td>` : ""}
-        <td class="num">${money(amount + taxAmount)}</td>
+        ${showTax ? `<td class="num">${item.tax}%</td><td class="num">${money(item.taxAmount)}</td>` : ""}
+        <td class="num">${money(item.lineTotal)}</td>
       </tr>
     `;
   }).join("");
   const taxSummary = showTax
     ? Array.from(calc.items.reduce((map, item) => {
       const rate = numberValue(item.tax);
-      const taxable = item.qty * item.rate;
       const current = map.get(rate) || { rate, taxable: 0, tax: 0 };
-      current.taxable += taxable;
-      current.tax += (taxable * rate) / 100;
+      current.taxable += item.taxable;
+      current.tax += item.taxAmount;
       map.set(rate, current);
       return map;
     }, new Map()).values())
@@ -871,6 +988,7 @@ function renderInvoicePrint(invoice) {
           <h2>Payment Details</h2>
           <p>Method: ${escapeHtml(invoice.paymentMethod || "Cash")}</p>
           ${showTax ? `<p>Tax Type: ${escapeHtml(mode.label)}</p>` : ""}
+          ${showTax ? `<p>Tax Mode: ${calc.taxMode === "inclusive" ? "Inclusive" : "Exclusive"}</p>` : ""}
           ${business.upi ? `<p>UPI: ${escapeHtml(business.upi)}</p>` : ""}
           ${business.bank ? `<p>${nl2br(business.bank)}</p>` : ""}
         </div>
@@ -964,94 +1082,7 @@ function numberToIndianWords(value) {
   return `${words.join(" ")} rupees`;
 }
 
-function renderActivityTable(selector, entries, allowDelete) {
-  const target = $(selector);
-  if (!entries.length) {
-    target.innerHTML = emptyState("No money entry yet.");
-    return;
-  }
-  target.innerHTML = `
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Type</th>
-          <th>Party</th>
-          <th>Category</th>
-          <th>Method</th>
-          <th class="amount-cell">Amount</th>
-          ${allowDelete ? "<th></th>" : ""}
-        </tr>
-      </thead>
-      <tbody>
-        ${entries.map((entry) => `
-          <tr>
-            <td>${formatDate(entry.date)}</td>
-            <td><span class="pill ${entry.type}">${entry.type === "income" ? "In" : "Out"}</span></td>
-            <td>
-              <strong>${escapeHtml(entry.party || "-")}</strong>
-              ${entry.note ? `<br><small>${escapeHtml(entry.note)}</small>` : ""}
-            </td>
-            <td>${escapeHtml(entry.category || "-")}</td>
-            <td>${escapeHtml(entry.method || "-")}</td>
-            <td class="amount-cell">${money(entry.amount)}</td>
-            ${allowDelete ? `<td>${entry.origin === "manual" ? `<button class="icon-button" type="button" data-transaction-delete="${entry.id}" aria-label="Delete entry"><span data-icon="trash"></span></button>` : ""}</td>` : ""}
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
-  `;
-  renderIcons(target);
-}
-
-function renderTransactions() {
-  const search = $("#transactionSearch").value.trim().toLowerCase();
-  const entries = allMoneyEntries().filter((entry) => {
-    const haystack = `${entry.party} ${entry.category} ${entry.method} ${entry.note}`.toLowerCase();
-    return !search || haystack.includes(search);
-  });
-  renderActivityTable("#transactionTable", entries, true);
-}
-
-function saveTransaction(event) {
-  event.preventDefault();
-  const entry = {
-    id: uid("entry"),
-    type: $("#transactionType").value,
-    date: $("#transactionDate").value || todayISO(),
-    party: $("#transactionParty").value.trim(),
-    category: $("#transactionCategory").value.trim() || ($("#transactionType").value === "income" ? "Other income" : "Expense"),
-    amount: numberValue($("#transactionAmount").value),
-    method: $("#transactionMethod").value,
-    note: $("#transactionNote").value.trim(),
-    createdAt: new Date().toISOString()
-  };
-
-  if (!entry.party || entry.amount <= 0) {
-    showToast("Please enter party and amount.");
-    return;
-  }
-
-  state.transactions.unshift(entry);
-  saveState();
-  $("#transactionForm").reset();
-  $("#transactionDate").value = todayISO();
-  $("#transactionMethod").value = state.paymentMethods[0];
-  renderAll();
-  showToast("Money entry saved.");
-}
-
-function deleteTransaction(id) {
-  const entry = state.transactions.find((item) => item.id === id);
-  if (!entry) return;
-  if (!window.confirm("Delete this money entry?")) return;
-  state.transactions = state.transactions.filter((item) => item.id !== id);
-  saveState();
-  renderAll();
-  showToast("Entry deleted.");
-}
-
-function ledgerRows() {
+function outstandingRows() {
   const map = new Map();
   state.parties.forEach((party) => {
     if (party.type === "supplier") return;
@@ -1081,43 +1112,6 @@ function ledgerRows() {
       map.set(name, current);
     });
   return Array.from(map.values()).sort((a, b) => b.due - a.due || a.name.localeCompare(b.name));
-}
-
-function renderLedger() {
-  const rows = ledgerRows();
-  const target = $("#ledgerTable");
-  if (!rows.length) {
-    target.innerHTML = emptyState("Customer ledger will appear after bills are saved.");
-    return;
-  }
-  target.innerHTML = `
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Customer</th>
-          <th>Phone</th>
-          <th>Invoices</th>
-          <th>Last bill</th>
-          <th class="amount-cell">Billed</th>
-          <th class="amount-cell">Paid</th>
-          <th class="amount-cell">Pending</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map((row) => `
-          <tr>
-            <td><strong>${escapeHtml(row.name)}</strong></td>
-            <td>${escapeHtml(row.phone || "-")}</td>
-            <td>${row.invoices}</td>
-            <td>${formatDate(row.lastDate)}</td>
-            <td class="amount-cell">${money(row.billed)}</td>
-            <td class="amount-cell">${money(row.paid)}</td>
-            <td class="amount-cell">${money(row.due)}</td>
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
-  `;
 }
 
 function resetPartyForm() {
@@ -1455,7 +1449,7 @@ function generatedNotifications() {
     .filter((lead) => lead.followUp && lead.followUp <= todayISO() && !["won", "lost"].includes(lead.status))
     .slice(0, 4)
     .map((lead) => ({ title: `Follow up ${lead.name}`, body: lead.note || "CRM follow-up is due.", type: "info" }));
-  const pending = ledgerRows()
+  const pending = outstandingRows()
     .filter((row) => row.due > 0)
     .slice(0, 4)
     .map((row) => ({ title: `${row.name} payment pending`, body: `${money(row.due)} due.`, type: "warning" }));
@@ -1486,14 +1480,14 @@ function aiInsightRows() {
   const prevDate = new Date();
   prevDate.setMonth(prevDate.getMonth() - 1);
   const previous = statsForMonth(prevDate.toISOString().slice(0, 7));
-  const growth = previous.moneyIn ? ((month.moneyIn - previous.moneyIn) / previous.moneyIn) * 100 : 0;
-  const topDue = ledgerRows().filter((row) => row.due > 0).sort((a, b) => b.due - a.due)[0];
-  const expenses = month.entries.filter((entry) => entry.type === "expense").reduce((sum, entry) => sum + entry.amount, 0);
+  const growth = previous.sales ? ((month.sales - previous.sales) / previous.sales) * 100 : 0;
+  const topDue = outstandingRows().filter((row) => row.due > 0).sort((a, b) => b.due - a.due)[0];
+  const gstShare = month.sales ? (month.gst / month.sales) * 100 : 0;
   return [
-    { title: "Cash forecast", body: `At this pace, month-end cash movement may close near ${money(month.profit * 1.4)}.` },
-    { title: "Sales trend", body: previous.moneyIn ? `Money-in is ${growth >= 0 ? "up" : "down"} ${Math.abs(growth).toFixed(1)}% versus last month.` : "Add last month data to unlock trend comparison." },
+    { title: "Billing forecast", body: `At this pace, month-end billing may close near ${money(month.sales * 1.4)}.` },
+    { title: "Sales trend", body: previous.sales ? `Billing is ${growth >= 0 ? "up" : "down"} ${Math.abs(growth).toFixed(1)}% versus last month.` : "Add last month bills to unlock trend comparison." },
     { title: "Collection priority", body: topDue ? `Call ${topDue.name} first; pending amount is ${money(topDue.due)}.` : "No customer collection pressure right now." },
-    { title: "Expense watch", body: expenses > month.moneyIn * 0.65 && month.moneyIn > 0 ? "Expenses are heavy this month; review vendor purchases." : "Expense ratio is within a normal operating band." }
+    { title: "GST watch", body: month.gst ? `GST portion is ${gstShare.toFixed(1)}% of this month's billing.` : "GST report will build after tax invoices are saved." }
   ];
 }
 
@@ -1547,32 +1541,33 @@ function renderReports() {
   const stats = statsForMonth(month);
   $("#reportSummary").innerHTML = [
     ["Invoice sales", stats.sales],
-    ["Money received", stats.moneyIn],
-    ["Money spent", stats.moneyOut],
-    ["Cash profit", stats.profit],
-    ["Pending from this month", stats.pending]
+    ["Amount received", stats.moneyIn],
+    ["Outstanding", stats.pending],
+    ["GST collected", stats.gst],
+    ["Bills this month", stats.invoices.length]
   ].map(([label, value]) => `
     <div class="report-line">
       <span>${label}</span>
-      <strong>${money(value)}</strong>
+      <strong>${typeof value === "number" && label !== "Bills this month" ? money(value) : escapeHtml(value)}</strong>
     </div>
   `).join("");
 
-  const expenses = stats.entries
-    .filter((entry) => entry.type === "expense")
-    .reduce((map, entry) => {
-      map[entry.category || "Expense"] = (map[entry.category || "Expense"] || 0) + numberValue(entry.amount);
-      return map;
-    }, {});
-  renderBars("#expenseBars", expenses, "No expenses for this month.");
-
-  const methods = stats.entries.reduce((map, entry) => {
-    const method = entry.method || "Other";
-    const amount = entry.type === "income" ? numberValue(entry.amount) : -numberValue(entry.amount);
-    map[method] = (map[method] || 0) + amount;
+  const taxes = stats.invoices.reduce((map, invoice) => {
+    calculateInvoice(invoice).items.forEach((item) => {
+      if (!item.taxAmount) return;
+      const label = `${item.tax}% GST`;
+      map[label] = (map[label] || 0) + item.taxAmount;
+    });
     return map;
   }, {});
-  renderBars("#methodBars", methods, "No payment movement for this month.");
+  renderBars("#taxBars", taxes, "No GST invoice for this month.");
+
+  const methods = stats.invoices.reduce((map, invoice) => {
+    const method = invoice.paymentMethod || "Other";
+    map[method] = (map[method] || 0) + calculateInvoice(invoice).paid;
+    return map;
+  }, {});
+  renderBars("#methodBars", methods, "No received amount for this month.");
 }
 
 function renderBars(selector, values, emptyMessage) {
@@ -1610,8 +1605,10 @@ function renderSettingsForm() {
   $("#cloudEndpoint").value = state.cloud.endpoint || "";
   $("#cloudToken").value = state.cloud.token || "";
   $("#cloudMessage").textContent = state.cloud.lastSync
-    ? `Last sync attempt: ${new Date(state.cloud.lastSync).toLocaleString("en-IN")}`
-    : "Cloud is not connected yet.";
+    ? `Last backend sync: ${new Date(state.cloud.lastSync).toLocaleString("en-IN")}`
+    : backendEndpoint()
+      ? "Backend is ready. Save or sync to test it."
+      : "Backend is not connected yet.";
   renderGstinInfo();
 }
 
@@ -1646,37 +1643,12 @@ function saveCloudSettings() {
 
 async function syncCloud() {
   saveCloudSettings();
-  if (!state.cloud.endpoint) {
-    showToast("Add a cloud endpoint first.");
+  if (!backendEndpoint()) {
+    showToast("Run the backend server or add an endpoint first.");
     return;
   }
-  const payload = clone(state);
-  payload.cloud.token = "";
-  try {
-    const response = await fetch(state.cloud.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(state.cloud.token ? { Authorization: `Bearer ${state.cloud.token}` } : {})
-      },
-      body: JSON.stringify({
-        app: "resham-printers-ledger",
-        savedAt: new Date().toISOString(),
-        data: payload
-      })
-    });
-    if (!response.ok) {
-      throw new Error(`Cloud returned ${response.status}`);
-    }
-    state.cloud.lastSync = new Date().toISOString();
-    saveState();
-    renderSettingsForm();
-    showToast("Cloud sync sent successfully.");
-  } catch (error) {
-    console.error(error);
-    $("#cloudMessage").textContent = "Sync failed. The endpoint must allow browser POST requests.";
-    showToast("Cloud sync failed.");
-  }
+  const ok = await syncStateToBackend();
+  showToast(ok ? "Backend sync successful." : "Backend sync failed.");
 }
 
 function downloadFile(filename, content, type) {
@@ -1697,6 +1669,24 @@ function exportBackup() {
   showToast("Backup downloaded.");
 }
 
+function normalizeImportedState(imported) {
+  return {
+    ...clone(DEFAULT_STATE),
+    ...imported,
+    business: { ...clone(DEFAULT_STATE.business), ...(imported.business || {}) },
+    cloud: { ...clone(DEFAULT_STATE.cloud), ...(imported.cloud || {}) },
+    invoices: Array.isArray(imported.invoices) ? imported.invoices.map((invoice) => ({ taxMode: "exclusive", ...invoice })) : [],
+    parties: Array.isArray(imported.parties) ? imported.parties : [],
+    items: Array.isArray(imported.items) && imported.items.length ? imported.items : seedItems(),
+    leads: Array.isArray(imported.leads) ? imported.leads : [],
+    employees: Array.isArray(imported.employees) && imported.employees.length ? imported.employees : clone(DEFAULT_STATE.employees),
+    activeEmployeeId: imported.activeEmployeeId || "owner",
+    notifications: Array.isArray(imported.notifications) ? imported.notifications : [],
+    paymentMethods: Array.isArray(imported.paymentMethods) ? imported.paymentMethods : clone(DEFAULT_STATE.paymentMethods),
+    transactions: []
+  };
+}
+
 function importBackup(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -1704,21 +1694,10 @@ function importBackup(event) {
   reader.onload = () => {
     try {
       const imported = JSON.parse(String(reader.result));
-      if (!imported.business || !Array.isArray(imported.invoices) || !Array.isArray(imported.transactions)) {
+      if (!imported.business || !Array.isArray(imported.invoices)) {
         throw new Error("Invalid backup");
       }
-      state = {
-        ...clone(DEFAULT_STATE),
-        ...imported,
-        business: { ...clone(DEFAULT_STATE.business), ...imported.business },
-        cloud: { ...clone(DEFAULT_STATE.cloud), ...(imported.cloud || {}) },
-        parties: Array.isArray(imported.parties) ? imported.parties : [],
-        items: Array.isArray(imported.items) ? imported.items : seedItems(),
-        leads: Array.isArray(imported.leads) ? imported.leads : [],
-        employees: Array.isArray(imported.employees) && imported.employees.length ? imported.employees : clone(DEFAULT_STATE.employees),
-        activeEmployeeId: imported.activeEmployeeId || "owner",
-        notifications: Array.isArray(imported.notifications) ? imported.notifications : []
-      };
+      state = normalizeImportedState(imported);
       saveState();
       resetInvoiceForm();
       renderAll();
@@ -1739,64 +1718,29 @@ function csvEscape(value) {
 }
 
 function exportCsv() {
-  const entries = allMoneyEntries();
   const rows = [
-    ["Date", "Type", "Party", "Category", "Method", "Amount", "Note"],
-    ...entries.map((entry) => [
-      entry.date,
-      entry.type,
-      entry.party,
-      entry.category,
-      entry.method,
-      numberValue(entry.amount).toFixed(2),
-      entry.note || ""
-    ])
+    ["Date", "Invoice", "Bill Type", "Party", "GSTIN", "Payment Method", "Tax Mode", "Taxable", "GST", "Total", "Received", "Pending"],
+    ...state.invoices.map((invoice) => {
+      const calc = calculateInvoice(invoice);
+      return [
+        invoice.date,
+        invoice.number,
+        invoiceTitle(invoice.billType),
+        invoice.customerName,
+        invoice.customerGstin || "",
+        invoice.paymentMethod || "",
+        calc.taxMode,
+        calc.taxable.toFixed(2),
+        calc.tax.toFixed(2),
+        calc.total.toFixed(2),
+        calc.paid.toFixed(2),
+        calc.due.toFixed(2)
+      ];
+    })
   ];
   const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
-  downloadFile(`resham-printers-money-${todayISO()}.csv`, csv, "text/csv");
-  showToast("CSV exported.");
-}
-
-function printLedger() {
-  const rows = ledgerRows();
-  printMarkup(`
-    <div class="print-document">
-      <header class="print-header">
-        <div>
-          <h1>${escapeHtml(state.business.name || "Resham Printers")}</h1>
-          <p>${nl2br(state.business.address || "")}</p>
-        </div>
-        <div class="print-title-box">
-          <strong>Customer Ledger</strong>
-          <span>${formatDate(todayISO())}</span>
-        </div>
-      </header>
-      <table class="print-table" style="margin-top:16px">
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Phone</th>
-            <th class="num">Invoices</th>
-            <th class="num">Billed</th>
-            <th class="num">Paid</th>
-            <th class="num">Pending</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((row) => `
-            <tr>
-              <td>${escapeHtml(row.name)}</td>
-              <td>${escapeHtml(row.phone || "-")}</td>
-              <td class="num">${row.invoices}</td>
-              <td class="num">${money(row.billed)}</td>
-              <td class="num">${money(row.paid)}</td>
-              <td class="num">${money(row.due)}</td>
-            </tr>
-          `).join("") || `<tr><td colspan="6">No ledger data</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `);
+  downloadFile(`resham-printers-billing-${todayISO()}.csv`, csv, "text/csv");
+  showToast("Billing CSV exported.");
 }
 
 function printReport() {
@@ -1821,10 +1765,10 @@ function printReport() {
         </div>
         <div class="total-box">
           <div class="total-line"><span>Invoice sales</span><strong>${money(stats.sales)}</strong></div>
-          <div class="total-line"><span>Money received</span><strong>${money(stats.moneyIn)}</strong></div>
-          <div class="total-line"><span>Money spent</span><strong>${money(stats.moneyOut)}</strong></div>
-          <div class="total-line grand"><span>Cash profit</span><strong>${money(stats.profit)}</strong></div>
-          <div class="total-line"><span>Pending</span><strong>${money(stats.pending)}</strong></div>
+          <div class="total-line"><span>Amount received</span><strong>${money(stats.moneyIn)}</strong></div>
+          <div class="total-line"><span>GST collected</span><strong>${money(stats.gst)}</strong></div>
+          <div class="total-line grand"><span>Outstanding</span><strong>${money(stats.pending)}</strong></div>
+          <div class="total-line"><span>Bills</span><strong>${stats.invoices.length}</strong></div>
         </div>
       </section>
     </div>
@@ -1839,8 +1783,6 @@ function renderAll() {
   renderInvoiceList();
   renderMasters();
   renderCRM();
-  renderTransactions();
-  renderLedger();
   renderReports();
   renderAI();
   if (currentView === "settings") renderSettingsForm();
@@ -1908,6 +1850,7 @@ function bindEvents() {
   $("#placeOfSupply").addEventListener("input", renderInvoiceSummary);
   $("#clearInvoiceBtn").addEventListener("click", resetInvoiceForm);
   $("#billType").addEventListener("change", renderInvoiceSummary);
+  $("#invoiceTaxMode").addEventListener("change", renderInvoiceSummary);
   $("#invoiceDiscount").addEventListener("input", renderInvoiceSummary);
   $("#invoicePaid").addEventListener("input", renderInvoiceSummary);
   $("#addItemBtn").addEventListener("click", () => {
@@ -1991,14 +1934,6 @@ function bindEvents() {
     if (remove) deleteInvoice(remove.dataset.invoiceDelete);
   });
 
-  $("#transactionForm").addEventListener("submit", saveTransaction);
-  $("#transactionSearch").addEventListener("input", renderTransactions);
-  $("#transactionTable").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-transaction-delete]");
-    if (button) deleteTransaction(button.dataset.transactionDelete);
-  });
-
-  $("#printLedgerBtn").addEventListener("click", printLedger);
   $("#partyForm").addEventListener("submit", saveParty);
   $("#itemMasterForm").addEventListener("submit", saveItemMaster);
   $("#clearPartyBtn").addEventListener("click", resetPartyForm);
@@ -2038,13 +1973,13 @@ function bindEvents() {
 
 function init() {
   $("#invoiceDate").value = todayISO();
-  $("#transactionDate").value = todayISO();
   $("#reportMonth").value = currentMonthISO();
   $("#itemMasterTax").value = state.business.defaultTax || 18;
   renderServiceChips();
   renderItemEditor();
   bindEvents();
   renderAll();
+  hydrateFromBackend();
 }
 
 init();
